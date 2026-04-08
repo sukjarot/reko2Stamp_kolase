@@ -1,4 +1,4 @@
-const CACHE_NAME = 'reko-stamp-v2.5.2';
+const CACHE_NAME = 'reko2stamp.kolase';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
