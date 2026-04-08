@@ -413,6 +413,11 @@ function handleStart(clientX, clientY) {
     return;
   }
 
+  // Deselect stamp if clicking on empty area
+  if (selectedStampId !== null) {
+    selectStamp(null, false);
+  }
+
   setPanningState(true);
   panStartX = clientX;
   panStartY = clientY;
@@ -425,26 +430,26 @@ function handleMove(clientX, clientY) {
     if (cropAction === 'move') {
       const dx = pos.x - dragStartPos.x;
       const dy = pos.y - dragStartPos.y;
-      cropRect.x = initialCropRect.x + dx;
-      cropRect.y = initialCropRect.y + dy;
+      cropRect.x = Math.max(0, Math.min(canvas.width - cropRect.w, initialCropRect.x + dx));
+      cropRect.y = Math.max(0, Math.min(canvas.height - cropRect.h, initialCropRect.y + dy));
     } else {
       const dx = pos.x - dragStartPos.x;
       const dy = pos.y - dragStartPos.y;
       const original = initialCropRect;
 
       if (cropAction.includes('n')) {
-        cropRect.y = original.y + dy;
-        cropRect.h = original.h - dy;
+        cropRect.y = Math.max(0, original.y + dy);
+        cropRect.h = Math.max(10, original.h - dy);
       }
       if (cropAction.includes('s')) {
-        cropRect.h = original.h + dy;
+        cropRect.h = Math.max(10, Math.min(canvas.height - cropRect.y, original.h + dy));
       }
       if (cropAction.includes('w')) {
-        cropRect.x = original.x + dx;
-        cropRect.w = original.w - dx;
+        cropRect.x = Math.max(0, original.x + dx);
+        cropRect.w = Math.max(10, original.w - dx);
       }
       if (cropAction.includes('e')) {
-        cropRect.w = original.w + dx;
+        cropRect.w = Math.max(10, Math.min(canvas.width - cropRect.x, original.w + dx));
       }
     }
 
@@ -462,6 +467,17 @@ function handleMove(clientX, clientY) {
     } else {
       stamp.x = pos.x;
       stamp.y = pos.y;
+    }
+
+    // Auto-align text near borders
+    const bbox = getTextBoundingBox(ctx, stamp);
+    if (bbox) {
+      const margin = 50; // pixels from border to trigger alignment
+      if (stamp.x < margin) {
+        stamp.x = 0; // left align
+      } else if (stamp.x + bbox.w > canvas.width - margin) {
+        stamp.x = canvas.width - bbox.w; // right align
+      }
     }
 
     requestRender();
@@ -566,6 +582,12 @@ canvasContainer.addEventListener('touchstart', (e) => {
   }
 }, { passive: false });
 
+canvasContainer.addEventListener('touchstart', (e) => {
+  if (e.target === canvasContainer && selectedStampId !== null) {
+    selectStamp(null, false);
+  }
+}, { passive: false });
+
 canvasContainer.addEventListener('touchmove', (e) => {
   if (!imgLoaded) return;
   e.preventDefault();
@@ -611,6 +633,9 @@ canvasContainer.addEventListener('wheel', (e) => {
 canvasContainer.addEventListener('mousedown', (e) => {
   if (e.target === canvasContainer && cropMode) {
     cancelCrop();
+  }
+  if (e.target === canvasContainer && selectedStampId !== null) {
+    selectStamp(null, false);
   }
 });
 
