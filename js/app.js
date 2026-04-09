@@ -220,6 +220,19 @@ function selectStamp(stampId, syncControls = true) {
   requestRender();
 }
 
+function clearStampSelection() {
+  if (selectedStampId === null) return;
+  selectedStampId = null;
+  renderStampOptions();
+  requestRender();
+}
+
+function waitForNextFrame() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
 function ensureStampState() {
   if (!stamps.length) {
     stamps = [createStamp()];
@@ -657,6 +670,7 @@ setupCameraEvents(
 
 rotateBtn.addEventListener('click', () => {
   if (!imgLoaded || !sourceImage) return;
+  clearStampSelection();
 
   const originalText = rotateBtn.textContent;
   rotateBtn.textContent = 'â³';
@@ -686,6 +700,7 @@ rotateBtn.addEventListener('click', () => {
 
 toggleCropBtn.addEventListener('click', () => {
   if (!imgLoaded || !sourceImage) return;
+  clearStampSelection();
 
   if (cropMode) {
     if (cropRect && cropRect.w > 10 && cropRect.h > 10) {
@@ -760,6 +775,7 @@ addStampBtn.addEventListener('click', addStamp);
 deleteStampBtn.addEventListener('click', deleteSelectedStamp);
 
 resetViewBtn.addEventListener('click', () => {
+  clearStampSelection();
   resetViewport();
   stamps.forEach((stamp, index) => {
     Object.assign(stamp, getDefaultStampPosition(index));
@@ -769,6 +785,7 @@ resetViewBtn.addEventListener('click', () => {
 });
 
 clearBtn.addEventListener('click', () => {
+  clearStampSelection();
   if (!confirm('Hapus foto ini?')) return;
 
   collageImages = [];
@@ -794,9 +811,18 @@ if (oldDownloadBtn) {
 
   newDownloadBtn.addEventListener('click', async () => {
     if (!imgLoaded) return alert('Belum ada foto untuk disimpan!');
+    clearStampSelection();
+    await waitForNextFrame();
     await savePhoto(canvas, filePrefixInput, fileCounterInput, dirHandle, filenamePreview);
   });
 }
+
+[openCameraBtn, gpsBtn, gpsFollowBtn, mapBtn, storageBtn].forEach((button) => {
+  if (!button) return;
+  button.addEventListener('click', () => {
+    clearStampSelection();
+  }, true);
+});
 
 setupLocationInput(locInput, suggestionsBox, gpsFollowBtn);
 setupGPSButton(gpsBtn, gpsFollowBtn);
