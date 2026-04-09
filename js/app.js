@@ -521,7 +521,7 @@ function cancelCrop() {
   cropMode = false;
   cropRect = null;
   cropAction = null;
-  toggleCropBtn.textContent = 'âœ‚ Potong';
+  toggleCropBtn.textContent = 'Potong';
   toggleCropBtn.classList.remove('btn-danger');
   toggleCropBtn.classList.add('btn-secondary');
   requestRender();
@@ -707,7 +707,7 @@ toggleCropBtn.addEventListener('click', () => {
     }
 
     cropMode = false;
-    toggleCropBtn.textContent = 'âœ‚ Potong';
+    toggleCropBtn.textContent = 'Potong';
     toggleCropBtn.classList.remove('btn-danger');
     toggleCropBtn.classList.add('btn-secondary');
   } else {
@@ -718,7 +718,7 @@ toggleCropBtn.addEventListener('click', () => {
       w: canvas.width * 0.8,
       h: canvas.height * 0.8
     };
-    toggleCropBtn.textContent = 'âœ… Terapkan';
+    toggleCropBtn.textContent = 'Terapkan';
     toggleCropBtn.classList.remove('btn-secondary');
     toggleCropBtn.classList.add('btn-danger');
   }
