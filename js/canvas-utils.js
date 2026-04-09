@@ -51,6 +51,47 @@ function getStampFont(stamp) {
   return `bold ${stamp.size}px "${stamp.fontFamily}"`;
 }
 
+function clampValue(value, min, max) {
+  if (max < min) return (min + max) / 2;
+  return Math.min(Math.max(value, min), max);
+}
+
+function getStampTextAlign(stamp) {
+  const align = stamp && stamp.textAlign;
+  return align === 'center' || align === 'right' ? align : 'left';
+}
+
+function getAlignedTextStartX(anchorX, textWidth, textAlign) {
+  if (textAlign === 'center') return anchorX - (textWidth / 2);
+  if (textAlign === 'right') return anchorX - textWidth;
+  return anchorX;
+}
+
+function getAdaptiveTextAlign(anchorX, canvasWidth, edgeZoneRatio = 0.4) {
+  if (!canvasWidth) return 'left';
+
+  const leftLimit = canvasWidth * edgeZoneRatio;
+  const rightLimit = canvasWidth * (1 - edgeZoneRatio);
+
+  if (anchorX <= leftLimit) return 'left';
+  if (anchorX >= rightLimit) return 'right';
+  return 'center';
+}
+
+function getStampMaxWidth(stamp, canvasWidth, padding = 20) {
+  const align = getStampTextAlign(stamp);
+
+  if (align === 'right') {
+    return Math.max(40, stamp.x - padding);
+  }
+
+  if (align === 'center') {
+    return Math.max(40, Math.min(stamp.x - padding, canvasWidth - stamp.x - padding) * 2);
+  }
+
+  return Math.max(40, canvasWidth - stamp.x - padding);
+}
+
 function getTextBoundingBox(ctx, stamp) {
   if (!ctx || !stamp) return null;
 
@@ -59,6 +100,7 @@ function getTextBoundingBox(ctx, stamp) {
 
   const lines = text.split('\n');
   const lineHeight = stamp.size * 1.25;
+  const textAlign = getStampTextAlign(stamp);
 
   ctx.save();
   ctx.font = getStampFont(stamp);
@@ -72,18 +114,16 @@ function getTextBoundingBox(ctx, stamp) {
   ctx.restore();
 
   return {
-    x: stamp.x,
+    x: getAlignedTextStartX(stamp.x, maxWidth, textAlign),
     y: stamp.y - stamp.size,
     w: maxWidth,
     h: lines.length * lineHeight
   };
 }
 
-function isPointInTextArea(posX, posY, ctx, stamp) {
-  const bbox = getTextBoundingBox(ctx, stamp);
+function isPointInTextBoundingBox(posX, posY, bbox, padding = 40) {
   if (!bbox) return false;
 
-  const padding = 40;
   return (
     posX >= bbox.x - padding &&
     posX <= bbox.x + bbox.w + padding &&
@@ -92,9 +132,15 @@ function isPointInTextArea(posX, posY, ctx, stamp) {
   );
 }
 
+function isPointInTextArea(posX, posY, ctx, stamp) {
+  const bbox = getTextBoundingBox(ctx, stamp);
+  return isPointInTextBoundingBox(posX, posY, bbox);
+}
+
 function getTopStampAtPosition(posX, posY, ctx, stamps) {
   for (let i = stamps.length - 1; i >= 0; i--) {
-    if (isPointInTextArea(posX, posY, ctx, stamps[i])) {
+    const bbox = getTextBoundingBox(ctx, stamps[i]);
+    if (isPointInTextBoundingBox(posX, posY, bbox)) {
       return stamps[i];
     }
   }
@@ -151,11 +197,52 @@ function getDist(touches) {
   );
 }
 
-function getPos(clientX, clientY, canvas) {
+function getCanvasPointFromClient(clientX, clientY, canvas, viewScale = 1, viewX = 0, viewY = 0) {
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+  const computedStyle = window.getComputedStyle(canvas);
+  const baseWidth = parseFloat(computedStyle.width) || (rect.width / viewScale) || canvas.width;
+  const baseHeight = parseFloat(computedStyle.height) || (rect.height / viewScale) || canvas.height;
+  const baseLeft = rect.left - viewX;
+  const baseTop = rect.top - viewY;
+  const localX = (clientX - baseLeft - viewX) / viewScale;
+  const localY = (clientY - baseTop - viewY) / viewScale;
+  const scaleX = canvas.width / baseWidth;
+  const scaleY = canvas.height / baseHeight;
+
+  return {
+    x: localX * scaleX,
+    y: localY * scaleY
+  };
+}
+
+function getPos(clientX, clientY, canvas, viewScale = 1, viewX = 0, viewY = 0) {
+  return getCanvasPointFromClient(clientX, clientY, canvas, viewScale, viewX, viewY);
+}
+
+function applyAdaptiveTextAlignment(ctx, stamp, canvasWidth, padding = 20) {
+  if (!stamp) return 'left';
+
+  stamp.textAlign = getAdaptiveTextAlign(stamp.x, canvasWidth);
+
+  const bbox = getTextBoundingBox(ctx, stamp);
+  if (!bbox) {
+    stamp.x = clampValue(stamp.x, padding, canvasWidth - padding);
+    return stamp.textAlign;
+  }
+
+  if (stamp.textAlign === 'right') {
+    stamp.x = clampValue(stamp.x, padding + bbox.w, canvasWidth - padding);
+    return stamp.textAlign;
+  }
+
+  if (stamp.textAlign === 'center') {
+    const halfWidth = bbox.w / 2;
+    stamp.x = clampValue(stamp.x, padding + halfWidth, canvasWidth - padding - halfWidth);
+    return stamp.textAlign;
+  }
+
+  stamp.x = clampValue(stamp.x, padding, canvasWidth - padding - bbox.w);
+  return stamp.textAlign;
 }
 
 function drawCropUI(ctx, canvas, cropRect, viewScale) {

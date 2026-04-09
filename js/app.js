@@ -160,6 +160,7 @@ function createStamp(overrides = {}) {
     opacity: parseInt(opacitySlider.value, 10),
     color: fontColor.value || '#ffffff',
     fontFamily: fontSelect.value || 'Roboto',
+    textAlign: getAdaptiveTextAlign(position.x, canvas.width || 1200),
     ...overrides
   };
 }
@@ -180,15 +181,17 @@ function renderStampOptions() {
     .map((stamp) => `<option value="${stamp.id}">${stamp.label}</option>`)
     .join('');
 
-  if (!selectedStampId && stamps.length) {
+  if (selectedStampId !== null && !stamps.some((stamp) => stamp.id === selectedStampId) && stamps.length) {
     selectedStampId = stamps[0].id;
   }
 
   if (selectedStampId) {
     stampSelect.value = selectedStampId;
+  } else {
+    stampSelect.selectedIndex = -1;
   }
 
-  deleteStampBtn.disabled = stamps.length <= 1;
+  deleteStampBtn.disabled = stamps.length <= 1 || selectedStampId === null;
 }
 
 function syncControlsFromStamp(stamp) {
@@ -236,6 +239,7 @@ function syncSelectedStampFromControls() {
   stamp.opacity = parseInt(opacitySlider.value, 10);
   stamp.color = fontColor.value || '#ffffff';
   stamp.fontFamily = fontSelect.value || 'Roboto';
+  applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
 
   sizeValDisplay.textContent = `${stamp.size}px`;
   opacityValDisplay.textContent = `${stamp.opacity}%`;
@@ -244,7 +248,10 @@ function syncSelectedStampFromControls() {
 
 function scaleStampPositions(previousWidth, previousHeight, nextWidth, nextHeight) {
   if (!previousWidth || !previousHeight || !nextWidth || !nextHeight) {
-    stamps.forEach((stamp, index) => Object.assign(stamp, getDefaultStampPosition(index)));
+    stamps.forEach((stamp, index) => {
+      Object.assign(stamp, getDefaultStampPosition(index));
+      applyAdaptiveTextAlignment(ctx, stamp, nextWidth || canvas.width);
+    });
     return;
   }
 
@@ -254,6 +261,7 @@ function scaleStampPositions(previousWidth, previousHeight, nextWidth, nextHeigh
   stamps.forEach((stamp) => {
     stamp.x *= ratioX;
     stamp.y *= ratioY;
+    applyAdaptiveTextAlignment(ctx, stamp, nextWidth);
   });
 }
 
@@ -357,7 +365,7 @@ function draw() {
     ctx.globalAlpha = stamp.opacity / 100;
     ctx.font = getStampFont(stamp);
     ctx.fillStyle = stamp.color || '#ffffff';
-    ctx.textAlign = 'left';
+    ctx.textAlign = getStampTextAlign(stamp);
 
     const shadowSize = Math.max(2, stamp.size / 15);
     ctx.shadowColor = `rgba(0,0,0,${stamp.opacity / 100})`;
@@ -370,7 +378,7 @@ function draw() {
       text,
       stamp.x,
       stamp.y,
-      Math.max(40, canvas.width - (stamp.x + 20)),
+      getStampMaxWidth(stamp, canvas.width),
       stamp.size * 1.25
     );
     ctx.restore();
@@ -386,8 +394,8 @@ function draw() {
   }
 }
 
-function handleStart(clientX, clientY) {
-  const pos = getPos(clientX, clientY, canvas);
+function handlePointerDown(clientX, clientY) {
+  const pos = getCanvasPointFromClient(clientX, clientY, canvas, viewScale, viewX, viewY);
   dragStartPos = pos;
 
   if (cropMode) {
@@ -401,30 +409,34 @@ function handleStart(clientX, clientY) {
     return;
   }
 
-  const targetStamp = getTopStampAtPosition(pos.x, pos.y, ctx, stamps);
+  let targetStamp = null;
+  for (let i = stamps.length - 1; i >= 0; i--) {
+    const bbox = getTextBoundingBox(ctx, stamps[i]);
+    if (isPointInTextBoundingBox(pos.x, pos.y, bbox)) {
+      targetStamp = stamps[i];
+      break;
+    }
+  }
+
   if (targetStamp) {
     activeDragStampId = targetStamp.id;
     selectStamp(targetStamp.id, true);
-    const bbox = getTextBoundingBox(ctx, targetStamp);
-    if (bbox) {
-      dragStartPos.offsetX = pos.x - targetStamp.x;
-      dragStartPos.offsetY = pos.y - (targetStamp.y - targetStamp.size);
-    }
+    dragStartPos.offsetX = pos.x - targetStamp.x;
+    dragStartPos.offsetY = pos.y - targetStamp.y;
     return;
   }
 
-  // Deselect stamp if clicking on empty area
-  if (selectedStampId !== null) {
-    selectStamp(null, false);
-  }
+  selectedStampId = null;
+  renderStampOptions();
+  requestRender();
 
   setPanningState(true);
   panStartX = clientX;
   panStartY = clientY;
 }
 
-function handleMove(clientX, clientY) {
-  const pos = getPos(clientX, clientY, canvas);
+function handlePointerMove(clientX, clientY) {
+  const pos = getCanvasPointFromClient(clientX, clientY, canvas, viewScale, viewX, viewY);
 
   if (cropMode && cropAction) {
     if (cropAction === 'move') {
@@ -461,24 +473,9 @@ function handleMove(clientX, clientY) {
     const stamp = stamps.find((item) => item.id === activeDragStampId);
     if (!stamp) return;
 
-    if (dragStartPos.offsetX !== undefined) {
-      stamp.x = pos.x - dragStartPos.offsetX;
-      stamp.y = pos.y - dragStartPos.offsetY + stamp.size;
-    } else {
-      stamp.x = pos.x;
-      stamp.y = pos.y;
-    }
-
-    // Auto-align text near borders
-    const bbox = getTextBoundingBox(ctx, stamp);
-    if (bbox) {
-      const margin = 50; // pixels from border to trigger alignment
-      if (stamp.x < margin) {
-        stamp.x = 0; // left align
-      } else if (stamp.x + bbox.w > canvas.width - margin) {
-        stamp.x = canvas.width - bbox.w; // right align
-      }
-    }
+    stamp.x = pos.x - (dragStartPos.offsetX || 0);
+    stamp.y = pos.y - (dragStartPos.offsetY || 0);
+    applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
 
     requestRender();
     return;
@@ -495,7 +492,7 @@ function handleMove(clientX, clientY) {
   }
 }
 
-function handleEnd() {
+function handlePointerUp() {
   if (cropMode && cropRect) {
     if (cropRect.w < 0) {
       cropRect.x += cropRect.w;
@@ -504,6 +501,14 @@ function handleEnd() {
     if (cropRect.h < 0) {
       cropRect.y += cropRect.h;
       cropRect.h = Math.abs(cropRect.h);
+    }
+  }
+
+  if (activeDragStampId) {
+    const stamp = stamps.find((item) => item.id === activeDragStampId);
+    if (stamp) {
+      applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
+      requestRender();
     }
   }
 
@@ -578,13 +583,7 @@ canvasContainer.addEventListener('touchstart', (e) => {
     initialPinchDist = getDist(e.touches);
     initialScale = viewScale;
   } else if (e.touches.length === 1) {
-    handleStart(e.touches[0].clientX, e.touches[0].clientY);
-  }
-}, { passive: false });
-
-canvasContainer.addEventListener('touchstart', (e) => {
-  if (e.target === canvasContainer && selectedStampId !== null) {
-    selectStamp(null, false);
+    handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
   }
 }, { passive: false });
 
@@ -602,25 +601,25 @@ canvasContainer.addEventListener('touchmove', (e) => {
   }
 
   if (e.touches.length === 1) {
-    handleMove(e.touches[0].clientX, e.touches[0].clientY);
+    handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
   }
 }, { passive: false });
 
-canvasContainer.addEventListener('touchend', handleEnd);
+canvasContainer.addEventListener('touchend', handlePointerUp);
 
 canvasContainer.addEventListener('mousedown', (e) => {
   if (!imgLoaded || e.button !== 0) return;
-  handleStart(e.clientX, e.clientY);
+  handlePointerDown(e.clientX, e.clientY);
 });
 
 window.addEventListener('mousemove', (e) => {
   if (!imgLoaded) return;
   if (e.buttons === 1) {
-    handleMove(e.clientX, e.clientY);
+    handlePointerMove(e.clientX, e.clientY);
   }
 });
 
-window.addEventListener('mouseup', handleEnd);
+window.addEventListener('mouseup', handlePointerUp);
 
 canvasContainer.addEventListener('wheel', (e) => {
   if (!imgLoaded) return;
@@ -629,15 +628,6 @@ canvasContainer.addEventListener('wheel', (e) => {
   const zoomStep = e.deltaY < 0 ? 1.12 : 0.9;
   applyZoom(viewScale * zoomStep, e.clientX, e.clientY);
 }, { passive: false });
-
-canvasContainer.addEventListener('mousedown', (e) => {
-  if (e.target === canvasContainer && cropMode) {
-    cancelCrop();
-  }
-  if (e.target === canvasContainer && selectedStampId !== null) {
-    selectStamp(null, false);
-  }
-});
 
 fileInput.addEventListener('change', async (e) => {
   try {
@@ -750,6 +740,7 @@ locInput.addEventListener('input', () => {
   const stamp = getSelectedStamp();
   if (!stamp) return;
   stamp.location = locInput.value.trim();
+  applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
   requestRender();
 });
 
@@ -757,6 +748,7 @@ document.addEventListener('reko:location-updated', (event) => {
   const stamp = getSelectedStamp();
   if (!stamp) return;
   stamp.location = (event.detail && event.detail.value ? event.detail.value : '').trim();
+  applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
   requestRender();
 });
 
@@ -769,7 +761,10 @@ deleteStampBtn.addEventListener('click', deleteSelectedStamp);
 
 resetViewBtn.addEventListener('click', () => {
   resetViewport();
-  stamps.forEach((stamp, index) => Object.assign(stamp, getDefaultStampPosition(index)));
+  stamps.forEach((stamp, index) => {
+    Object.assign(stamp, getDefaultStampPosition(index));
+    applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
+  });
   requestRender();
 });
 
