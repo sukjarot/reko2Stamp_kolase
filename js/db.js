@@ -37,3 +37,14 @@ async function loadSetting(key) {
     request.onerror = () => reject(request.error);
   });
 }
+
+async function deleteSetting(key) {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('settings', 'readwrite');
+    const store = tx.objectStore('settings');
+    store.delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}

@@ -408,6 +408,16 @@ button.main-btn:active {
   transform: scale(0.96); 
 }
 
+button.main-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+button.main-btn:disabled:active {
+  transform: none;
+}
+
 .btn-secondary { 
   background: #334155; 
 }

@@ -73,6 +73,7 @@ const filenamePreview = document.getElementById('filenamePreview');
 const dirStatus = document.getElementById('dirStatus');
 const storageInfo = document.getElementById('storageInfo');
 const activeFolderLabel = document.getElementById('activeFolderLabel');
+const clearDirBtn = document.getElementById('clearDirBtn');
 
 const cameraModal = document.getElementById('cameraModal');
 const cameraVideo = document.getElementById('cameraVideo');
@@ -817,6 +818,7 @@ setupStorageModal(
   storageBtn,
   storageModal,
   document.getElementById('pickDirBtn'),
+  clearDirBtn,
   document.getElementById('saveSettingsBtn'),
   document.getElementById('cancelSettingsBtn'),
   filePrefixInput,
@@ -829,7 +831,7 @@ setupStorageModal(
 
 (async function restoreSettings() {
   try {
-    await restoreStorageSettings(filePrefixInput, fileCounterInput, dirStatus, storageInfo, activeFolderLabel);
+    await restoreStorageSettings(filePrefixInput, fileCounterInput, dirStatus, storageInfo, activeFolderLabel, clearDirBtn);
   } catch (err) {
     console.error('Gagal memuat pengaturan storage:', err);
   }

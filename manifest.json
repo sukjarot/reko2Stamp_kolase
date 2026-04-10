@@ -3,7 +3,7 @@
   "short_name": "Reko2stamp",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f8fafc",
+  "background_color": "#f5ac58",
   "theme_color": "#f8fafc",
   "description": "Aplikasi Stamp & Crop Foto",
   "icons": [
