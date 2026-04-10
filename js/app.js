@@ -439,9 +439,7 @@ function handlePointerDown(clientX, clientY) {
     return;
   }
 
-  selectedStampId = null;
-  renderStampOptions();
-  requestRender();
+  clearStampSelection();
 
   setPanningState(true);
   panStartX = clientX;
@@ -670,8 +668,6 @@ setupCameraEvents(
 
 rotateBtn.addEventListener('click', () => {
   if (!imgLoaded || !sourceImage) return;
-  clearStampSelection();
-
   const originalText = rotateBtn.textContent;
   rotateBtn.textContent = 'â³';
 
@@ -700,8 +696,6 @@ rotateBtn.addEventListener('click', () => {
 
 toggleCropBtn.addEventListener('click', () => {
   if (!imgLoaded || !sourceImage) return;
-  clearStampSelection();
-
   if (cropMode) {
     if (cropRect && cropRect.w > 10 && cropRect.h > 10) {
       const croppedCanvas = applyCrop(sourceImage, isUsingCanvasSource, cropRect);
@@ -775,7 +769,6 @@ addStampBtn.addEventListener('click', addStamp);
 deleteStampBtn.addEventListener('click', deleteSelectedStamp);
 
 resetViewBtn.addEventListener('click', () => {
-  clearStampSelection();
   resetViewport();
   stamps.forEach((stamp, index) => {
     Object.assign(stamp, getDefaultStampPosition(index));
@@ -785,7 +778,6 @@ resetViewBtn.addEventListener('click', () => {
 });
 
 clearBtn.addEventListener('click', () => {
-  clearStampSelection();
   if (!confirm('Hapus foto ini?')) return;
 
   collageImages = [];
@@ -816,13 +808,6 @@ if (oldDownloadBtn) {
     await savePhoto(canvas, filePrefixInput, fileCounterInput, dirHandle, filenamePreview);
   });
 }
-
-[openCameraBtn, gpsBtn, gpsFollowBtn, mapBtn, storageBtn].forEach((button) => {
-  if (!button) return;
-  button.addEventListener('click', () => {
-    clearStampSelection();
-  }, true);
-});
 
 setupLocationInput(locInput, suggestionsBox, gpsFollowBtn);
 setupGPSButton(gpsBtn, gpsFollowBtn);
