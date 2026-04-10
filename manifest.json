@@ -4,7 +4,7 @@
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f5ac58",
-  "theme_color": "#f8fafc",
+  "theme_color": "#f5ac58",
   "description": "Aplikasi Stamp & Crop Foto",
   "icons": [
     {
