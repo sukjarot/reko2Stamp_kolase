@@ -2,19 +2,24 @@
   "name": "Reko2stamp",
   "short_name": "Reko2stamp",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#f5ac58",
-  "theme_color": "#f5ac58",
+  "display_override": ["standalone", "fullscreen"],
+  "orientation": "portrait-primary",
+  "background_color": "#1e293b",
+  "theme_color": "#1e293b",
   "description": "Aplikasi Stamp & Crop Foto",
+  "categories": ["photography", "utilities"],
   "icons": [
     {
       "src": "icon ultimate.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
-
 }
+
 
 
 

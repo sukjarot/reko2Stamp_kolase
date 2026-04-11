@@ -74,6 +74,9 @@ const dirStatus = document.getElementById('dirStatus');
 const storageInfo = document.getElementById('storageInfo');
 const activeFolderLabel = document.getElementById('activeFolderLabel');
 const clearDirBtn = document.getElementById('clearDirBtn');
+const installBtn = document.getElementById('installBtn');
+
+let deferredPrompt = null;
 
 const cameraModal = document.getElementById('cameraModal');
 const cameraVideo = document.getElementById('cameraVideo');
@@ -809,6 +812,36 @@ if (oldDownloadBtn) {
     await savePhoto(canvas, filePrefixInput, fileCounterInput, dirHandle, filenamePreview);
   });
 }
+
+if (installBtn) {
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choiceResult = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBtn.style.display = 'none';
+    if (choiceResult.outcome === 'accepted') {
+      console.log('Pengguna menerima pemasangan aplikasi.');
+    } else {
+      console.log('Pengguna menolak pemasangan aplikasi.');
+    }
+  });
+}
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  deferredPrompt = event;
+  if (installBtn) {
+    installBtn.style.display = 'block';
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  console.log('Aplikasi berhasil dipasang.');
+  if (installBtn) {
+    installBtn.style.display = 'none';
+  }
+});
 
 setupLocationInput(locInput, suggestionsBox, gpsFollowBtn);
 setupGPSButton(gpsBtn, gpsFollowBtn);
