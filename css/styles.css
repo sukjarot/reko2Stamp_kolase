@@ -198,6 +198,89 @@ textarea:focus {
   color: white; 
 }
 
+.stamp-align-card {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.6), rgba(51, 65, 85, 0.45));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stamp-align-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.stamp-align-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 114, 182, 0.35);
+  background: rgba(244, 114, 182, 0.12);
+  color: #f9a8d4;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.stamp-align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stamp-align-btn {
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(51, 65, 85, 0.88);
+  color: var(--text-main);
+  border-radius: 12px;
+  padding: 11px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.stamp-align-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(71, 85, 105, 0.95);
+}
+
+.stamp-align-btn:active {
+  transform: scale(0.97);
+}
+
+.stamp-align-btn.is-active {
+  border-color: rgba(251, 113, 133, 0.72);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(244, 114, 182, 0.22));
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.stamp-align-heart {
+  color: #fda4af;
+  opacity: 0.72;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.stamp-align-btn.is-active .stamp-align-heart {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
 /* GPS & MAP BUTTONS */
 .gps-btn {
   background: rgba(16, 185, 129, 0.2); 
@@ -752,5 +835,29 @@ canvas {
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.4); 
     padding-bottom: 80px; 
+  }
+
+  .stamp-align-card {
+    padding: 10px;
+  }
+
+  .stamp-align-header {
+    flex-wrap: wrap;
+  }
+
+  .stamp-align-btn {
+    padding: 10px 6px;
+    font-size: 12px;
+    gap: 5px;
+  }
+}
+
+@media (max-width: 420px) {
+  .stamp-align-badge {
+    font-size: 10px;
+  }
+
+  .stamp-align-btn {
+    font-size: 11px;
   }
 }

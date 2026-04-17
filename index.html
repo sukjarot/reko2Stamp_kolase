@@ -75,6 +75,26 @@
           <textarea id="locInput" rows="3" placeholder="Ketik lokasi atau klik tombol GPS..."></textarea>
           <div id="suggestions" class="suggestions-list"></div>
         </div>
+        <div class="stamp-align-card">
+          <div class="stamp-align-header">
+            <span>Justify Teks Stamp</span>
+            <span class="stamp-align-badge">&hearts; Manual</span>
+          </div>
+          <div id="stampAlignControls" class="stamp-align-grid" role="group" aria-label="Atur justify teks stamp">
+            <button type="button" class="stamp-align-btn is-active" data-align="left" aria-pressed="true">
+              <span class="stamp-align-heart" aria-hidden="true">&hearts;</span>
+              <span>Kiri</span>
+            </button>
+            <button type="button" class="stamp-align-btn" data-align="center" aria-pressed="false">
+              <span class="stamp-align-heart" aria-hidden="true">&hearts;</span>
+              <span>Tengah</span>
+            </button>
+            <button type="button" class="stamp-align-btn" data-align="right" aria-pressed="false">
+              <span class="stamp-align-heart" aria-hidden="true">&hearts;</span>
+              <span>Kanan</span>
+            </button>
+          </div>
+        </div>
         <div class="location-btn-group">
           <button id="gpsBtn" class="gps-btn" title="Gunakan Lokasi Saat Ini">
             📍 Cek GPS

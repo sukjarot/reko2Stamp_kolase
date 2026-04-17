@@ -56,6 +56,7 @@ const fontSelect = document.getElementById('fontSelect');
 const stampSelect = document.getElementById('stampSelect');
 const addStampBtn = document.getElementById('addStampBtn');
 const deleteStampBtn = document.getElementById('deleteStampBtn');
+const alignButtons = Array.from(document.querySelectorAll('.stamp-align-btn'));
 
 const resetViewBtn = document.getElementById('resetView');
 const toggleCropBtn = document.getElementById('toggleCrop');
@@ -164,7 +165,7 @@ function createStamp(overrides = {}) {
     opacity: parseInt(opacitySlider.value, 10),
     color: fontColor.value || '#ffffff',
     fontFamily: fontSelect.value || 'Roboto',
-    textAlign: getAdaptiveTextAlign(position.x, canvas.width || 1200),
+    textAlign: 'left',
     ...overrides
   };
 }
@@ -198,6 +199,15 @@ function renderStampOptions() {
   deleteStampBtn.disabled = stamps.length <= 1 || selectedStampId === null;
 }
 
+function syncAlignButtons(stamp) {
+  const activeAlign = stamp ? getStampTextAlign(stamp) : null;
+  alignButtons.forEach((button) => {
+    const isActive = button.dataset.align === activeAlign;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
 function syncControlsFromStamp(stamp) {
   if (!stamp) return;
 
@@ -210,6 +220,7 @@ function syncControlsFromStamp(stamp) {
   opacityValDisplay.textContent = `${stamp.opacity}%`;
   fontColor.value = stamp.color || '#ffffff';
   fontSelect.value = stamp.fontFamily || 'Roboto';
+  syncAlignButtons(stamp);
 }
 
 function selectStamp(stampId, syncControls = true) {
@@ -219,6 +230,8 @@ function selectStamp(stampId, syncControls = true) {
   const stamp = getSelectedStamp();
   if (stamp && syncControls) {
     syncControlsFromStamp(stamp);
+  } else {
+    syncAlignButtons(stamp);
   }
 
   requestRender();
@@ -228,6 +241,7 @@ function clearStampSelection() {
   if (selectedStampId === null) return;
   selectedStampId = null;
   renderStampOptions();
+  syncAlignButtons(null);
   requestRender();
 }
 
@@ -256,7 +270,7 @@ function syncSelectedStampFromControls() {
   stamp.opacity = parseInt(opacitySlider.value, 10);
   stamp.color = fontColor.value || '#ffffff';
   stamp.fontFamily = fontSelect.value || 'Roboto';
-  applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
+  constrainStampTextPosition(ctx, stamp, canvas.width);
 
   sizeValDisplay.textContent = `${stamp.size}px`;
   opacityValDisplay.textContent = `${stamp.opacity}%`;
@@ -267,7 +281,7 @@ function scaleStampPositions(previousWidth, previousHeight, nextWidth, nextHeigh
   if (!previousWidth || !previousHeight || !nextWidth || !nextHeight) {
     stamps.forEach((stamp, index) => {
       Object.assign(stamp, getDefaultStampPosition(index));
-      applyAdaptiveTextAlignment(ctx, stamp, nextWidth || canvas.width);
+      constrainStampTextPosition(ctx, stamp, nextWidth || canvas.width);
     });
     return;
   }
@@ -278,7 +292,7 @@ function scaleStampPositions(previousWidth, previousHeight, nextWidth, nextHeigh
   stamps.forEach((stamp) => {
     stamp.x *= ratioX;
     stamp.y *= ratioY;
-    applyAdaptiveTextAlignment(ctx, stamp, nextWidth);
+    constrainStampTextPosition(ctx, stamp, nextWidth);
   });
 }
 
@@ -340,9 +354,11 @@ function addStamp() {
     size: baseStamp ? baseStamp.size : parseInt(sizeSlider.value, 10),
     opacity: baseStamp ? baseStamp.opacity : parseInt(opacitySlider.value, 10),
     color: baseStamp ? baseStamp.color : (fontColor.value || '#ffffff'),
-    fontFamily: baseStamp ? baseStamp.fontFamily : (fontSelect.value || 'Roboto')
+    fontFamily: baseStamp ? baseStamp.fontFamily : (fontSelect.value || 'Roboto'),
+    textAlign: baseStamp ? getStampTextAlign(baseStamp) : 'left'
   });
 
+  constrainStampTextPosition(ctx, newStamp, canvas.width);
   stamps.push(newStamp);
   selectStamp(newStamp.id, true);
 }
@@ -490,7 +506,7 @@ function handlePointerMove(clientX, clientY) {
 
     stamp.x = pos.x - (dragStartPos.offsetX || 0);
     stamp.y = pos.y - (dragStartPos.offsetY || 0);
-    applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
+    constrainStampTextPosition(ctx, stamp, canvas.width);
 
     requestRender();
     return;
@@ -522,7 +538,7 @@ function handlePointerUp() {
   if (activeDragStampId) {
     const stamp = stamps.find((item) => item.id === activeDragStampId);
     if (stamp) {
-      applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
+      constrainStampTextPosition(ctx, stamp, canvas.width);
       requestRender();
     }
   }
@@ -753,7 +769,7 @@ locInput.addEventListener('input', () => {
   const stamp = getSelectedStamp();
   if (!stamp) return;
   stamp.location = locInput.value.trim();
-  applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
+  constrainStampTextPosition(ctx, stamp, canvas.width);
   requestRender();
 });
 
@@ -761,12 +777,24 @@ document.addEventListener('reko:location-updated', (event) => {
   const stamp = getSelectedStamp();
   if (!stamp) return;
   stamp.location = (event.detail && event.detail.value ? event.detail.value : '').trim();
-  applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
+  constrainStampTextPosition(ctx, stamp, canvas.width);
   requestRender();
 });
 
 stampSelect.addEventListener('change', (e) => {
   selectStamp(e.target.value, true);
+});
+
+alignButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const stamp = getSelectedStamp();
+    if (!stamp) return;
+
+    stamp.textAlign = button.dataset.align || 'left';
+    constrainStampTextPosition(ctx, stamp, canvas.width);
+    syncAlignButtons(stamp);
+    requestRender();
+  });
 });
 
 addStampBtn.addEventListener('click', addStamp);
@@ -776,7 +804,7 @@ resetViewBtn.addEventListener('click', () => {
   resetViewport();
   stamps.forEach((stamp, index) => {
     Object.assign(stamp, getDefaultStampPosition(index));
-    applyAdaptiveTextAlignment(ctx, stamp, canvas.width);
+    constrainStampTextPosition(ctx, stamp, canvas.width);
   });
   requestRender();
 });

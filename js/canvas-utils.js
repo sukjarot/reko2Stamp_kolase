@@ -67,17 +67,6 @@ function getAlignedTextStartX(anchorX, textWidth, textAlign) {
   return anchorX;
 }
 
-function getAdaptiveTextAlign(anchorX, canvasWidth, edgeZoneRatio = 0.4) {
-  if (!canvasWidth) return 'left';
-
-  const leftLimit = canvasWidth * edgeZoneRatio;
-  const rightLimit = canvasWidth * (1 - edgeZoneRatio);
-
-  if (anchorX <= leftLimit) return 'left';
-  if (anchorX >= rightLimit) return 'right';
-  return 'center';
-}
-
 function getStampMaxWidth(stamp, canvasWidth, padding = 20) {
   const align = getStampTextAlign(stamp);
 
@@ -219,30 +208,47 @@ function getPos(clientX, clientY, canvas, viewScale = 1, viewX = 0, viewY = 0) {
   return getCanvasPointFromClient(clientX, clientY, canvas, viewScale, viewX, viewY);
 }
 
-function applyAdaptiveTextAlignment(ctx, stamp, canvasWidth, padding = 20) {
+function constrainStampTextPosition(ctx, stamp, canvasWidth, padding = 20) {
   if (!stamp) return 'left';
 
-  stamp.textAlign = getAdaptiveTextAlign(stamp.x, canvasWidth);
+  const textAlign = getStampTextAlign(stamp);
+  if (!canvasWidth) return textAlign;
 
   const bbox = getTextBoundingBox(ctx, stamp);
   if (!bbox) {
     stamp.x = clampValue(stamp.x, padding, canvasWidth - padding);
-    return stamp.textAlign;
+    return textAlign;
   }
 
-  if (stamp.textAlign === 'right') {
+  const availableWidth = Math.max(0, canvasWidth - (padding * 2));
+  if (bbox.w >= availableWidth) {
+    if (textAlign === 'right') {
+      stamp.x = canvasWidth - padding;
+      return textAlign;
+    }
+
+    if (textAlign === 'center') {
+      stamp.x = canvasWidth / 2;
+      return textAlign;
+    }
+
+    stamp.x = padding;
+    return textAlign;
+  }
+
+  if (textAlign === 'right') {
     stamp.x = clampValue(stamp.x, padding + bbox.w, canvasWidth - padding);
-    return stamp.textAlign;
+    return textAlign;
   }
 
-  if (stamp.textAlign === 'center') {
+  if (textAlign === 'center') {
     const halfWidth = bbox.w / 2;
     stamp.x = clampValue(stamp.x, padding + halfWidth, canvasWidth - padding - halfWidth);
-    return stamp.textAlign;
+    return textAlign;
   }
 
   stamp.x = clampValue(stamp.x, padding, canvasWidth - padding - bbox.w);
-  return stamp.textAlign;
+  return textAlign;
 }
 
 function drawCropUI(ctx, canvas, cropRect, viewScale) {
