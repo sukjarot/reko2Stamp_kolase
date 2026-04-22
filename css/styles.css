@@ -67,7 +67,7 @@ main {
 .canvas-wrap { 
   flex-grow: 1; 
   position: relative; 
-  background: #000; 
+  background: #6c6868; 
   display: flex; 
   align-items: center; 
   justify-content: center;
