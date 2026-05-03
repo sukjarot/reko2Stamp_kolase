@@ -268,6 +268,49 @@ function getDefaultStampPosition(index = 0) {
   };
 }
 
+function getStampAnchorFromLeft(left, width, textAlign) {
+  if (textAlign === 'right') return left + width;
+  if (textAlign === 'center') return left + (width / 2);
+  return left;
+}
+
+function placeStampToRightOfActiveStamp(newStamp, activeStamp) {
+  if (!newStamp || !activeStamp || !canvas.width) return false;
+
+  const padding = 20;
+  const gap = Math.max(24, newStamp.size * 0.8);
+  const activeBox = getTextBoundingBox(ctx, activeStamp);
+  const newBox = getTextBoundingBox(ctx, newStamp);
+  if (!activeBox || !newBox) return false;
+
+  const availableWidth = Math.max(0, canvas.width - (padding * 2));
+  const combinedWidth = activeBox.w + gap + newBox.w;
+
+  if (combinedWidth <= availableWidth) {
+    let activeLeft = activeBox.x;
+    const overflow = (activeLeft + combinedWidth) - (canvas.width - padding);
+
+    if (overflow > 0) activeLeft -= overflow;
+    if (activeLeft < padding) activeLeft = padding;
+
+    const newLeft = activeLeft + activeBox.w + gap;
+    activeStamp.x = getStampAnchorFromLeft(activeLeft, activeBox.w, getStampTextAlign(activeStamp));
+    newStamp.x = getStampAnchorFromLeft(newLeft, newBox.w, getStampTextAlign(newStamp));
+    newStamp.y = activeBox.y + newStamp.size;
+    return true;
+  }
+
+  const newLeft = Math.max(padding, canvas.width - padding - newBox.w);
+  const belowTop = activeBox.y + activeBox.h + gap;
+  const aboveTop = activeBox.y - newBox.h - gap;
+  const hasRoomBelow = canvas.height && belowTop + newBox.h <= canvas.height - padding;
+  const nextTop = hasRoomBelow ? belowTop : Math.max(padding, aboveTop);
+
+  newStamp.x = getStampAnchorFromLeft(newLeft, newBox.w, getStampTextAlign(newStamp));
+  newStamp.y = nextTop + newStamp.size;
+  return true;
+}
+
 function createStamp(overrides = {}) {
   const position = getDefaultStampPosition(stamps.length);
   const id = `stamp-${stampCounter++}`;
@@ -515,6 +558,10 @@ function addStamp() {
     textAlign: baseStamp ? getStampTextAlign(baseStamp) : 'left'
   });
 
+  if (baseStamp) {
+    placeStampToRightOfActiveStamp(newStamp, baseStamp);
+    constrainStampTextPosition(ctx, baseStamp, canvas.width, canvas.height);
+  }
   constrainStampTextPosition(ctx, newStamp, canvas.width, canvas.height);
   stamps.push(newStamp);
   selectStamp(newStamp.id, true);
