@@ -6,8 +6,43 @@ const VISUAL_HANDLE_SIZE = 30;
 const TOUCH_HANDLE_SIZE = 80;
 const MAX_DIMENSION = 4096;
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
-const COLLAGE_LIMIT = 5;
+// [UPDATED]
+const COLLAGE_LIMIT = 3;
 const COLLAGE_MAX_DIMENSION = 3072;
+
+// [ADDED]
+const COLLAGE_LAYOUT_PRESETS = {
+  2: {
+    vertical: [
+      { x: 0, y: 0, w: 1, h: 0.5 },
+      { x: 0, y: 0.5, w: 1, h: 0.5 }
+    ],
+    horizontal: [
+      { x: 0, y: 0, w: 0.5, h: 1 },
+      { x: 0.5, y: 0, w: 0.5, h: 1 }
+    ]
+  },
+
+  3: {
+    top1_bottom2: [
+      { x: 0, y: 0, w: 1, h: 0.5 },
+      { x: 0, y: 0.5, w: 0.5, h: 0.5 },
+      { x: 0.5, y: 0.5, w: 0.5, h: 0.5 }
+    ],
+
+    top2_bottom1: [
+      { x: 0, y: 0, w: 0.5, h: 0.5 },
+      { x: 0.5, y: 0, w: 0.5, h: 0.5 },
+      { x: 0, y: 0.5, w: 1, h: 0.5 }
+    ],
+
+    left_big_right2: [
+      { x: 0, y: 0, w: 0.6, h: 1 },
+      { x: 0.6, y: 0, w: 0.4, h: 0.5 },
+      { x: 0.6, y: 0.5, w: 0.4, h: 0.5 }
+    ]
+  }
+};
 
 // [ADDED] Config-based collage layouts.
 const layouts = {
@@ -489,6 +524,11 @@ function buildRoundedRectPath(ctx, x, y, width, height, radius) {
 
 // [UPDATED] Layout selection now comes from the config object.
 function getCollageLayout(count, layoutKey = 'auto') {
+  const presetGroup = COLLAGE_LAYOUT_PRESETS[count];
+  if (layoutKey !== 'auto' && presetGroup && presetGroup[layoutKey]) {
+    return presetGroup[layoutKey];
+  }
+
   if (layoutKey !== 'auto' && layouts[layoutKey]) {
     return layouts[layoutKey];
   }
@@ -496,12 +536,8 @@ function getCollageLayout(count, layoutKey = 'auto') {
   return layouts[`grid${count}`] || layouts.grid1;
 }
 
-// [ADDED]
+// [UPDATED]
 function getCollageFrameCapacity(layoutKey = 'auto') {
-  if (layoutKey !== 'auto' && layouts[layoutKey]) {
-    return layouts[layoutKey].length;
-  }
-
   return COLLAGE_LIMIT;
 }
 
@@ -549,7 +585,19 @@ function composeCollageCanvas(images, maxDimension = COLLAGE_MAX_DIMENSION, layo
   canvas.height = maxDimension;
 
   const ctx = canvas.getContext('2d');
-  const layout = getCollageLayout(images.length, layoutKey);
+  // [UPDATED]
+  let layout;
+  const requestedLayoutKey = layoutKey || (typeof selectedLayoutKey !== 'undefined' ? selectedLayoutKey : 'auto');
+
+  if (requestedLayoutKey !== 'auto') {
+    const presetGroup = COLLAGE_LAYOUT_PRESETS[images.length];
+    layout = presetGroup ? presetGroup[requestedLayoutKey] : null;
+  }
+
+  if (!layout) {
+    layout = getCollageLayout(images.length);
+  }
+
   const gap = images.length > 1 ? Math.max(8, Math.round(maxDimension * 0.008)) : 0;
 
   ctx.fillStyle = '#020617';

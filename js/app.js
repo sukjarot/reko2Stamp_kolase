@@ -16,7 +16,8 @@ let imgLoaded = false;
 
 let collageImages = [];
 let collageFrameTransforms = [];
-let activeLayoutKey = 'auto';
+// [ADDED]
+let selectedLayoutKey = 'auto';
 let stamps = [];
 let selectedStampId = null;
 let stampCounter = 1;
@@ -104,7 +105,7 @@ const now = new Date();
 const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 dtInput.value = localIso;
 if (layoutSelect) {
-  activeLayoutKey = layoutSelect.value || 'auto';
+  selectedLayoutKey = layoutSelect.value || 'auto';
 }
 
 function requestRender() {
@@ -149,7 +150,7 @@ function applyZoom(nextScale, clientX, clientY) {
 // [UPDATED] Show current layout capacity without changing the existing info element.
 function updateCollageInfo() {
   if (collageInfo) {
-    const capacity = getCollageFrameCapacity(activeLayoutKey);
+    const capacity = getCollageFrameCapacity(selectedLayoutKey);
     collageInfo.textContent = `Kolase: ${collageImages.length}/${capacity} foto`;
   }
 }
@@ -168,12 +169,25 @@ function resetCollageFrameTransforms() {
 
 // [ADDED]
 function getActiveFrameCapacity() {
-  return getCollageFrameCapacity(activeLayoutKey);
+  return getCollageFrameCapacity(selectedLayoutKey);
 }
 
 // [ADDED]
 function getVisibleCollageCount() {
   return Math.min(collageImages.length, getActiveFrameCapacity());
+}
+
+// [ADDED]
+function validateLayoutKey() {
+  if (selectedLayoutKey === 'auto') return;
+
+  const presets = COLLAGE_LAYOUT_PRESETS[collageImages.length];
+  if (!presets || !presets[selectedLayoutKey]) {
+    selectedLayoutKey = 'auto';
+    if (layoutSelect) {
+      layoutSelect.value = 'auto';
+    }
+  }
 }
 
 // [ADDED]
@@ -186,7 +200,7 @@ function getFrameHitAtCanvasPoint(pos) {
     canvas.width,
     canvas.height,
     getVisibleCollageCount(),
-    activeLayoutKey
+    selectedLayoutKey
   );
 }
 
@@ -194,7 +208,7 @@ function getFrameHitAtCanvasPoint(pos) {
 function applyFrameTransform(frameIndex, nextTransform) {
   if (frameIndex === null || frameIndex < 0 || frameIndex >= collageImages.length) return;
 
-  const layout = getCollageLayout(getVisibleCollageCount(), activeLayoutKey);
+  const layout = getCollageLayout(getVisibleCollageCount(), selectedLayoutKey);
   const gap = getVisibleCollageCount() > 1 ? Math.max(8, Math.round(Math.min(canvas.width, canvas.height) * 0.008)) : 0;
   const slot = layout[frameIndex];
   if (!slot) return;
@@ -434,14 +448,14 @@ function composeCurrentCollageSource() {
 
   ensureCollageFrameTransforms();
 
-  if (collageImages.length === 1 && activeLayoutKey === 'auto') {
+  if (collageImages.length === 1 && selectedLayoutKey === 'auto') {
     return collageImages[0];
   }
 
   return composeCollageCanvas(
     collageImages,
     COLLAGE_MAX_DIMENSION,
-    activeLayoutKey,
+    selectedLayoutKey,
     collageFrameTransforms
   );
 }
@@ -454,7 +468,7 @@ function requestCollageTransformRender() {
   requestAnimationFrame(() => {
     isCollageRenderQueued = false;
 
-    if (collageImages.length > 1 || activeLayoutKey !== 'auto') {
+    if (collageImages.length > 1 || selectedLayoutKey !== 'auto') {
       const composedSource = composeCurrentCollageSource();
       if (composedSource) {
         sourceImage = composedSource;
@@ -477,6 +491,7 @@ function rebuildCollageSource() {
     return;
   }
 
+  validateLayoutKey();
   const composedSource = composeCurrentCollageSource();
 
   applySourceImage(composedSource, !(composedSource instanceof HTMLImageElement));
@@ -532,7 +547,7 @@ function draw() {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (collageImages.length === 1 && activeLayoutKey === 'auto') {
+  if (collageImages.length === 1 && selectedLayoutKey === 'auto') {
     ensureCollageFrameTransforms();
     const slotRect = { x: 0, y: 0, w: canvas.width, h: canvas.height };
     const frameTransform = clampFrameTransformToSlot(collageImages[0], slotRect, collageFrameTransforms[0]);
@@ -920,7 +935,7 @@ if (addPhotoInput) {
 // [ADDED] Layout changes reuse the same collage source rebuild path.
 if (layoutSelect) {
   layoutSelect.addEventListener('change', () => {
-    activeLayoutKey = layoutSelect.value || 'auto';
+    selectedLayoutKey = layoutSelect.value || 'auto';
     ensureCollageFrameTransforms();
 
     if (collageImages.length > getActiveFrameCapacity()) {
@@ -930,6 +945,17 @@ if (layoutSelect) {
     rebuildCollageSource();
   });
 }
+
+// [ADDED]
+document.querySelectorAll('[data-layout]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    selectedLayoutKey = btn.dataset.layout || 'auto';
+    if (layoutSelect) {
+      layoutSelect.value = selectedLayoutKey;
+    }
+    rebuildCollageSource();
+  });
+});
 
 setupCameraEvents(
   openCameraBtn,
