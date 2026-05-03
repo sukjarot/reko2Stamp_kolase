@@ -15,10 +15,16 @@ let isUsingCanvasSource = false;
 let imgLoaded = false;
 
 let collageImages = [];
+let collageFrameTransforms = [];
+let activeLayoutKey = 'auto';
 let stamps = [];
 let selectedStampId = null;
 let stampCounter = 1;
 let activeDragStampId = null;
+let activeFrameIndex = null;
+let initialFrameTransform = null;
+let pinchFrameIndex = null;
+let initialFrameScale = 1;
 
 let viewScale = 1;
 let viewX = 0;
@@ -33,11 +39,14 @@ let initialCropRect = null;
 let initialPinchDist = 0;
 let initialScale = 1;
 let isDrawing = false;
+let isCollageRenderQueued = false;
 let isPanning = false;
 let panStartX = 0;
 let panStartY = 0;
 
 const fileInput = document.getElementById('fileInput');
+const addPhotoInput = document.getElementById('addPhotoInput');
+const layoutSelect = document.getElementById('layoutSelect');
 const dtInput = document.getElementById('dtInput');
 const showDateToggle = document.getElementById('showDateToggle');
 const locInput = document.getElementById('locInput');
@@ -94,6 +103,9 @@ const closeMapBtn = document.getElementById('closeMapBtn');
 const now = new Date();
 const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 dtInput.value = localIso;
+if (layoutSelect) {
+  activeLayoutKey = layoutSelect.value || 'auto';
+}
 
 function requestRender() {
   if (!isDrawing) {
@@ -134,10 +146,102 @@ function applyZoom(nextScale, clientX, clientY) {
   updateTransform();
 }
 
+// [UPDATED] Show current layout capacity without changing the existing info element.
 function updateCollageInfo() {
   if (collageInfo) {
-    collageInfo.textContent = `Kolase: ${collageImages.length}/${COLLAGE_LIMIT} foto`;
+    const capacity = getCollageFrameCapacity(activeLayoutKey);
+    collageInfo.textContent = `Kolase: ${collageImages.length}/${capacity} foto`;
   }
+}
+
+// [ADDED]
+function ensureCollageFrameTransforms() {
+  collageFrameTransforms = collageImages.map((_, index) => (
+    normalizeFrameTransform(collageFrameTransforms[index] || getDefaultFrameTransform())
+  ));
+}
+
+// [ADDED]
+function resetCollageFrameTransforms() {
+  collageFrameTransforms = collageImages.map(() => getDefaultFrameTransform());
+}
+
+// [ADDED]
+function getActiveFrameCapacity() {
+  return getCollageFrameCapacity(activeLayoutKey);
+}
+
+// [ADDED]
+function getVisibleCollageCount() {
+  return Math.min(collageImages.length, getActiveFrameCapacity());
+}
+
+// [ADDED]
+function getFrameHitAtCanvasPoint(pos) {
+  if (!pos || !collageImages.length) return null;
+
+  return getCollageFrameAtPoint(
+    pos.x,
+    pos.y,
+    canvas.width,
+    canvas.height,
+    getVisibleCollageCount(),
+    activeLayoutKey
+  );
+}
+
+// [ADDED]
+function applyFrameTransform(frameIndex, nextTransform) {
+  if (frameIndex === null || frameIndex < 0 || frameIndex >= collageImages.length) return;
+
+  const layout = getCollageLayout(getVisibleCollageCount(), activeLayoutKey);
+  const gap = getVisibleCollageCount() > 1 ? Math.max(8, Math.round(Math.min(canvas.width, canvas.height) * 0.008)) : 0;
+  const slot = layout[frameIndex];
+  if (!slot) return;
+
+  const slotRect = getCollageSlotRect(slot, canvas.width, canvas.height, gap);
+  const previousTransform = normalizeFrameTransform(collageFrameTransforms[frameIndex]);
+  const clampedTransform = clampFrameTransformToSlot(
+    collageImages[frameIndex],
+    slotRect,
+    nextTransform
+  );
+
+  if (
+    previousTransform.scale === clampedTransform.scale &&
+    previousTransform.offsetX === clampedTransform.offsetX &&
+    previousTransform.offsetY === clampedTransform.offsetY
+  ) {
+    return;
+  }
+
+  collageFrameTransforms[frameIndex] = clampedTransform;
+  requestCollageTransformRender();
+}
+
+// [ADDED]
+function zoomFrameAtPoint(frameIndex, scaleFactor, pos) {
+  if (frameIndex === null || frameIndex < 0 || !pos) return false;
+
+  ensureCollageFrameTransforms();
+  const currentTransform = normalizeFrameTransform(collageFrameTransforms[frameIndex]);
+  const nextScale = Math.min(Math.max(currentTransform.scale * scaleFactor, 1), 5);
+  const ratio = nextScale / currentTransform.scale;
+  const hit = getFrameHitAtCanvasPoint(pos);
+  if (!hit || hit.index !== frameIndex) return false;
+
+  const centerX = hit.rect.x + (hit.rect.w / 2);
+  const centerY = hit.rect.y + (hit.rect.h / 2);
+  const localX = pos.x - centerX;
+  const localY = pos.y - centerY;
+
+  applyFrameTransform(frameIndex, {
+    scale: nextScale,
+    offsetX: localX - ((localX - currentTransform.offsetX) * ratio),
+    offsetY: localY - ((localY - currentTransform.offsetY) * ratio)
+  });
+
+  return true;
 }
 
 function getDefaultStampPosition(index = 0) {
@@ -164,7 +268,7 @@ function createStamp(overrides = {}) {
     size: parseInt(sizeSlider.value, 10),
     opacity: parseInt(opacitySlider.value, 10),
     color: fontColor.value || '#ffffff',
-    fontFamily: fontSelect.value || 'Roboto',
+    fontFamily: fontSelect.value || 'Arial',
     textAlign: 'left',
     ...overrides
   };
@@ -219,7 +323,7 @@ function syncControlsFromStamp(stamp) {
   opacitySlider.value = stamp.opacity;
   opacityValDisplay.textContent = `${stamp.opacity}%`;
   fontColor.value = stamp.color || '#ffffff';
-  fontSelect.value = stamp.fontFamily || 'Roboto';
+  fontSelect.value = stamp.fontFamily || 'Arial';
   syncAlignButtons(stamp);
 }
 
@@ -269,7 +373,7 @@ function syncSelectedStampFromControls() {
   stamp.size = parseInt(sizeSlider.value, 10);
   stamp.opacity = parseInt(opacitySlider.value, 10);
   stamp.color = fontColor.value || '#ffffff';
-  stamp.fontFamily = fontSelect.value || 'Roboto';
+  stamp.fontFamily = fontSelect.value || 'Arial';
   constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
 
   sizeValDisplay.textContent = `${stamp.size}px`;
@@ -324,18 +428,56 @@ function applySourceImage(nextSource, usingCanvas) {
   requestRender();
 }
 
+// [ADDED]
+function composeCurrentCollageSource() {
+  if (!collageImages.length) return null;
+
+  ensureCollageFrameTransforms();
+
+  if (collageImages.length === 1 && activeLayoutKey === 'auto') {
+    return collageImages[0];
+  }
+
+  return composeCollageCanvas(
+    collageImages,
+    COLLAGE_MAX_DIMENSION,
+    activeLayoutKey,
+    collageFrameTransforms
+  );
+}
+
+// [ADDED]
+function requestCollageTransformRender() {
+  if (isCollageRenderQueued) return;
+
+  isCollageRenderQueued = true;
+  requestAnimationFrame(() => {
+    isCollageRenderQueued = false;
+
+    if (collageImages.length > 1 || activeLayoutKey !== 'auto') {
+      const composedSource = composeCurrentCollageSource();
+      if (composedSource) {
+        sourceImage = composedSource;
+        isUsingCanvasSource = true;
+      }
+    }
+
+    requestRender();
+  });
+}
+
+// [UPDATED]
 function rebuildCollageSource() {
   if (!collageImages.length) {
     sourceImage = null;
     isUsingCanvasSource = false;
     imgLoaded = false;
+    updateCollageInfo();
     requestRender();
     return;
   }
 
-  const composedSource = collageImages.length === 1
-    ? collageImages[0]
-    : composeCollageCanvas(collageImages, COLLAGE_MAX_DIMENSION);
+  const composedSource = composeCurrentCollageSource();
 
   applySourceImage(composedSource, !(composedSource instanceof HTMLImageElement));
   updateCollageInfo();
@@ -354,7 +496,7 @@ function addStamp() {
     size: baseStamp ? baseStamp.size : parseInt(sizeSlider.value, 10),
     opacity: baseStamp ? baseStamp.opacity : parseInt(opacitySlider.value, 10),
     color: baseStamp ? baseStamp.color : (fontColor.value || '#ffffff'),
-    fontFamily: baseStamp ? baseStamp.fontFamily : (fontSelect.value || 'Roboto'),
+    fontFamily: baseStamp ? baseStamp.fontFamily : (fontSelect.value || 'Arial'),
     textAlign: baseStamp ? getStampTextAlign(baseStamp) : 'left'
   });
 
@@ -374,6 +516,7 @@ function deleteSelectedStamp() {
   selectStamp(nextStamp.id, true);
 }
 
+// [UPDATED] Existing render pipeline preserved; source photo draw supports one-frame transforms.
 function draw() {
   if (!imgLoaded || !sourceImage) {
     canvas.width = 300;
@@ -381,14 +524,23 @@ function draw() {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, 300, 300);
     ctx.fillStyle = '#64748b';
-    ctx.font = '16px Roboto';
+    ctx.font = '16px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Pilih Foto Dulu', 150, 150);
     return;
   }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+
+  if (collageImages.length === 1 && activeLayoutKey === 'auto') {
+    ensureCollageFrameTransforms();
+    const slotRect = { x: 0, y: 0, w: canvas.width, h: canvas.height };
+    const frameTransform = clampFrameTransformToSlot(collageImages[0], slotRect, collageFrameTransforms[0]);
+    collageFrameTransforms[0] = frameTransform;
+    drawImageCover(ctx, sourceImage, 0, 0, canvas.width, canvas.height, frameTransform);
+  } else {
+    ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+  }
 
   stamps.forEach((stamp) => {
     const text = buildStampText(stamp);
@@ -427,6 +579,7 @@ function draw() {
   }
 }
 
+// [UPDATED] Pointer down can select stamps, crop handles, or a collage frame.
 function handlePointerDown(clientX, clientY) {
   const pos = getCanvasPointFromClient(clientX, clientY, canvas, viewScale, viewX, viewY);
   dragStartPos = pos;
@@ -461,11 +614,21 @@ function handlePointerDown(clientX, clientY) {
 
   clearStampSelection();
 
+  const frameHit = getFrameHitAtCanvasPoint(pos);
+  if (frameHit) {
+    ensureCollageFrameTransforms();
+    activeFrameIndex = frameHit.index;
+    initialFrameTransform = normalizeFrameTransform(collageFrameTransforms[activeFrameIndex]);
+    setPanningState(true);
+    return;
+  }
+
   setPanningState(true);
   panStartX = clientX;
   panStartY = clientY;
 }
 
+// [UPDATED] Dragging an active frame pans that frame's image.
 function handlePointerMove(clientX, clientY) {
   const pos = getCanvasPointFromClient(clientX, clientY, canvas, viewScale, viewX, viewY);
 
@@ -512,6 +675,17 @@ function handlePointerMove(clientX, clientY) {
     return;
   }
 
+  if (activeFrameIndex !== null && initialFrameTransform) {
+    const dx = pos.x - dragStartPos.x;
+    const dy = pos.y - dragStartPos.y;
+    applyFrameTransform(activeFrameIndex, {
+      scale: initialFrameTransform.scale,
+      offsetX: initialFrameTransform.offsetX + dx,
+      offsetY: initialFrameTransform.offsetY + dy
+    });
+    return;
+  }
+
   if (isPanning) {
     const dx = clientX - panStartX;
     const dy = clientY - panStartY;
@@ -523,6 +697,7 @@ function handlePointerMove(clientX, clientY) {
   }
 }
 
+// [UPDATED]
 function handlePointerUp() {
   if (cropMode && cropRect) {
     if (cropRect.w < 0) {
@@ -546,6 +721,9 @@ function handlePointerUp() {
   cropAction = null;
   initialCropRect = null;
   activeDragStampId = null;
+  activeFrameIndex = null;
+  initialFrameTransform = null;
+  pinchFrameIndex = null;
   setPanningState(false);
   delete dragStartPos.offsetX;
   delete dragStartPos.offsetY;
@@ -582,6 +760,7 @@ function loadImageFromFile(file) {
   });
 }
 
+// [UPDATED] Original gallery upload still replaces the collage.
 async function replaceCollageWithFiles(fileList) {
   const files = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
   if (!files.length) return;
@@ -593,16 +772,46 @@ async function replaceCollageWithFiles(fileList) {
 
   const images = await Promise.all(limitedFiles.map(loadImageFromFile));
   collageImages = images;
+  resetCollageFrameTransforms();
   rebuildCollageSource();
 }
 
+// [ADDED]
+async function appendCollageWithFiles(fileList) {
+  const files = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
+  if (!files.length) return;
+
+  const capacity = getActiveFrameCapacity();
+  const remainingSlots = Math.max(0, capacity - collageImages.length);
+  if (!remainingSlots) {
+    alert(`Layout ini sudah penuh (${capacity} foto). Pilih layout lain atau hapus foto lama dulu.`);
+    return;
+  }
+
+  const limitedFiles = files.slice(0, remainingSlots);
+  if (files.length > remainingSlots) {
+    alert(`Sisa frame hanya ${remainingSlots}. Foto selebihnya diabaikan.`);
+  }
+
+  const images = await Promise.all(limitedFiles.map(loadImageFromFile));
+  collageImages = [...collageImages, ...images];
+  collageFrameTransforms = [
+    ...collageFrameTransforms,
+    ...images.map(() => getDefaultFrameTransform())
+  ];
+  rebuildCollageSource();
+}
+
+// [UPDATED] Camera photos append into the next available frame.
 function appendCapturedImage(imageSource) {
-  if (collageImages.length >= COLLAGE_LIMIT) {
-    alert(`Kolase maksimal ${COLLAGE_LIMIT} foto. Hapus foto lama dulu jika ingin menambah lagi.`);
+  const capacity = getActiveFrameCapacity();
+  if (collageImages.length >= capacity) {
+    alert(`Kolase maksimal ${capacity} foto untuk layout ini. Hapus foto lama dulu jika ingin menambah lagi.`);
     return;
   }
 
   collageImages = [...collageImages, imageSource];
+  collageFrameTransforms = [...collageFrameTransforms, getDefaultFrameTransform()];
   rebuildCollageSource();
 }
 
@@ -613,6 +822,14 @@ canvasContainer.addEventListener('touchstart', (e) => {
     e.preventDefault();
     initialPinchDist = getDist(e.touches);
     initialScale = viewScale;
+    const midpointX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const midpointY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    const midpoint = getCanvasPointFromClient(midpointX, midpointY, canvas, viewScale, viewX, viewY);
+    const frameHit = getFrameHitAtCanvasPoint(midpoint);
+    pinchFrameIndex = frameHit ? frameHit.index : null;
+    initialFrameScale = pinchFrameIndex !== null
+      ? normalizeFrameTransform(collageFrameTransforms[pinchFrameIndex]).scale
+      : 1;
   } else if (e.touches.length === 1) {
     handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
   }
@@ -626,6 +843,15 @@ canvasContainer.addEventListener('touchmove', (e) => {
     const currentDist = getDist(e.touches);
     const midpointX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
     const midpointY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    const midpoint = getCanvasPointFromClient(midpointX, midpointY, canvas, viewScale, viewX, viewY);
+
+    if (pinchFrameIndex !== null) {
+      const scaleFactor = (initialFrameScale * (currentDist / initialPinchDist)) /
+        normalizeFrameTransform(collageFrameTransforms[pinchFrameIndex]).scale;
+      zoomFrameAtPoint(pinchFrameIndex, scaleFactor, midpoint);
+      return;
+    }
+
     const newScale = initialScale * (currentDist / initialPinchDist);
     applyZoom(newScale, midpointX, midpointY);
     return;
@@ -657,6 +883,12 @@ canvasContainer.addEventListener('wheel', (e) => {
 
   e.preventDefault();
   const zoomStep = e.deltaY < 0 ? 1.12 : 0.9;
+  const pos = getCanvasPointFromClient(e.clientX, e.clientY, canvas, viewScale, viewX, viewY);
+  const frameHit = getFrameHitAtCanvasPoint(pos);
+  if (frameHit && zoomFrameAtPoint(frameHit.index, zoomStep, pos)) {
+    return;
+  }
+
   applyZoom(viewScale * zoomStep, e.clientX, e.clientY);
 }, { passive: false });
 
@@ -670,6 +902,34 @@ fileInput.addEventListener('change', async (e) => {
     fileInput.value = '';
   }
 });
+
+// [ADDED] Append-only upload path for the Add Photo button.
+if (addPhotoInput) {
+  addPhotoInput.addEventListener('change', async (e) => {
+    try {
+      await appendCollageWithFiles(e.target.files);
+    } catch (err) {
+      console.error('Gagal menambah foto:', err);
+      alert('Foto gagal dimuat. Coba pilih file lain.');
+    } finally {
+      addPhotoInput.value = '';
+    }
+  });
+}
+
+// [ADDED] Layout changes reuse the same collage source rebuild path.
+if (layoutSelect) {
+  layoutSelect.addEventListener('change', () => {
+    activeLayoutKey = layoutSelect.value || 'auto';
+    ensureCollageFrameTransforms();
+
+    if (collageImages.length > getActiveFrameCapacity()) {
+      alert('Sebagian foto tersimpan di state, tapi tidak tampil karena layout ini punya frame lebih sedikit.');
+    }
+
+    rebuildCollageSource();
+  });
+}
 
 setupCameraEvents(
   openCameraBtn,
@@ -704,7 +964,8 @@ rotateBtn.addEventListener('click', () => {
     tempCtx.drawImage(sourceImage, -w / 2, -h / 2);
 
     collageImages = [tempCanvas];
-    applySourceImage(tempCanvas, true);
+    resetCollageFrameTransforms();
+    rebuildCollageSource();
 
     if (cropMode) {
       cancelCrop();
@@ -721,7 +982,8 @@ toggleCropBtn.addEventListener('click', () => {
       const croppedCanvas = applyCrop(sourceImage, isUsingCanvasSource, cropRect);
       if (croppedCanvas) {
         collageImages = [croppedCanvas];
-        applySourceImage(croppedCanvas, true);
+        resetCollageFrameTransforms();
+        rebuildCollageSource();
       }
     }
 
@@ -813,6 +1075,7 @@ clearBtn.addEventListener('click', () => {
   if (!confirm('Hapus foto ini?')) return;
 
   collageImages = [];
+  collageFrameTransforms = [];
   sourceImage = null;
   isUsingCanvasSource = false;
   imgLoaded = false;

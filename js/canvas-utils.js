@@ -9,6 +9,35 @@ const MAX_FILE_SIZE = 4 * 1024 * 1024;
 const COLLAGE_LIMIT = 5;
 const COLLAGE_MAX_DIMENSION = 3072;
 
+// [ADDED] Config-based collage layouts.
+const layouts = {
+  grid1: [
+    { x: 0, y: 0, w: 1, h: 1 }
+  ],
+  grid2: [
+    { x: 0, y: 0, w: 0.5, h: 1 },
+    { x: 0.5, y: 0, w: 0.5, h: 1 }
+  ],
+  grid3: [
+    { x: 0, y: 0, w: 1, h: 0.56 },
+    { x: 0, y: 0.56, w: 0.5, h: 0.44 },
+    { x: 0.5, y: 0.56, w: 0.5, h: 0.44 }
+  ],
+  grid4: [
+    { x: 0, y: 0, w: 0.5, h: 0.5 },
+    { x: 0.5, y: 0, w: 0.5, h: 0.5 },
+    { x: 0, y: 0.5, w: 0.5, h: 0.5 },
+    { x: 0.5, y: 0.5, w: 0.5, h: 0.5 }
+  ],
+  grid5: [
+    { x: 0, y: 0, w: 0.5, h: 0.5 },
+    { x: 0.5, y: 0, w: 0.5, h: 0.5 },
+    { x: 0, y: 0.5, w: 1 / 3, h: 0.5 },
+    { x: 1 / 3, y: 0.5, w: 1 / 3, h: 0.5 },
+    { x: 2 / 3, y: 0.5, w: 1 / 3, h: 0.5 }
+  ]
+};
+
 function getSourceWidth(sourceImage, isUsingCanvasSource) {
   if (!sourceImage) return 0;
   return isUsingCanvasSource ? sourceImage.width : sourceImage.naturalWidth;
@@ -47,8 +76,9 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   }
 }
 
+// [UPDATED] Use the selected font with Arial/sans-serif fallback.
 function getStampFont(stamp) {
-  return `bold ${stamp.size}px "${stamp.fontFamily}"`;
+  return `bold ${stamp.size}px "${stamp.fontFamily || 'Arial'}", Arial, sans-serif`;
 }
 
 function clampValue(value, min, max) {
@@ -381,16 +411,65 @@ function applyCrop(sourceImage, isUsingCanvasSource, cropRect) {
   return tC;
 }
 
-function drawImageCover(ctx, image, dx, dy, dw, dh) {
+// [ADDED]
+function getDefaultFrameTransform() {
+  return {
+    scale: 1,
+    offsetX: 0,
+    offsetY: 0
+  };
+}
+
+// [ADDED]
+function normalizeFrameTransform(transform) {
+  return {
+    scale: Math.max(1, Number(transform && transform.scale) || 1),
+    offsetX: Number(transform && transform.offsetX) || 0,
+    offsetY: Number(transform && transform.offsetY) || 0
+  };
+}
+
+// [ADDED]
+function getImageCoverMetrics(image, dx, dy, dw, dh, transform = {}) {
   const sw = image.width || image.naturalWidth;
   const sh = image.height || image.naturalHeight;
-  const scale = Math.max(dw / sw, dh / sh);
+  const frameTransform = normalizeFrameTransform(transform);
+  const scale = Math.max(dw / sw, dh / sh) * frameTransform.scale;
   const drawW = sw * scale;
   const drawH = sh * scale;
-  const offsetX = dx + (dw - drawW) / 2;
-  const offsetY = dy + (dh - drawH) / 2;
+  const offsetX = dx + (dw - drawW) / 2 + frameTransform.offsetX;
+  const offsetY = dy + (dh - drawH) / 2 + frameTransform.offsetY;
 
-  ctx.drawImage(image, offsetX, offsetY, drawW, drawH);
+  return { sw, sh, scale, drawW, drawH, offsetX, offsetY };
+}
+
+// [ADDED]
+function clampFrameTransformToSlot(image, slotRect, transform = {}) {
+  const nextTransform = normalizeFrameTransform(transform);
+  if (!image || !slotRect) return nextTransform;
+
+  const metrics = getImageCoverMetrics(
+    image,
+    slotRect.x,
+    slotRect.y,
+    slotRect.w,
+    slotRect.h,
+    nextTransform
+  );
+  const maxOffsetX = Math.max(0, (metrics.drawW - slotRect.w) / 2);
+  const maxOffsetY = Math.max(0, (metrics.drawH - slotRect.h) / 2);
+
+  nextTransform.offsetX = clampValue(nextTransform.offsetX, -maxOffsetX, maxOffsetX);
+  nextTransform.offsetY = clampValue(nextTransform.offsetY, -maxOffsetY, maxOffsetY);
+
+  return nextTransform;
+}
+
+// [UPDATED] Existing cover draw now accepts per-frame scale and pan.
+function drawImageCover(ctx, image, dx, dy, dw, dh, transform = {}) {
+  const metrics = getImageCoverMetrics(image, dx, dy, dw, dh, transform);
+
+  ctx.drawImage(image, metrics.offsetX, metrics.offsetY, metrics.drawW, metrics.drawH);
 }
 
 function buildRoundedRectPath(ctx, x, y, width, height, radius) {
@@ -408,46 +487,70 @@ function buildRoundedRectPath(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-function getCollageLayout(count) {
-  const layouts = {
-    2: [
-      { x: 0, y: 0, w: 0.5, h: 1 },
-      { x: 0.5, y: 0, w: 0.5, h: 1 }
-    ],
-    3: [
-      { x: 0, y: 0, w: 1, h: 0.56 },
-      { x: 0, y: 0.56, w: 0.5, h: 0.44 },
-      { x: 0.5, y: 0.56, w: 0.5, h: 0.44 }
-    ],
-    4: [
-      { x: 0, y: 0, w: 0.5, h: 0.5 },
-      { x: 0.5, y: 0, w: 0.5, h: 0.5 },
-      { x: 0, y: 0.5, w: 0.5, h: 0.5 },
-      { x: 0.5, y: 0.5, w: 0.5, h: 0.5 }
-    ],
-    5: [
-      { x: 0, y: 0, w: 0.5, h: 0.5 },
-      { x: 0.5, y: 0, w: 0.5, h: 0.5 },
-      { x: 0, y: 0.5, w: 1 / 3, h: 0.5 },
-      { x: 1 / 3, y: 0.5, w: 1 / 3, h: 0.5 },
-      { x: 2 / 3, y: 0.5, w: 1 / 3, h: 0.5 }
-    ]
-  };
+// [UPDATED] Layout selection now comes from the config object.
+function getCollageLayout(count, layoutKey = 'auto') {
+  if (layoutKey !== 'auto' && layouts[layoutKey]) {
+    return layouts[layoutKey];
+  }
 
-  return layouts[count] || [{ x: 0, y: 0, w: 1, h: 1 }];
+  return layouts[`grid${count}`] || layouts.grid1;
 }
 
-function composeCollageCanvas(images, maxDimension = COLLAGE_MAX_DIMENSION) {
+// [ADDED]
+function getCollageFrameCapacity(layoutKey = 'auto') {
+  if (layoutKey !== 'auto' && layouts[layoutKey]) {
+    return layouts[layoutKey].length;
+  }
+
+  return COLLAGE_LIMIT;
+}
+
+// [ADDED]
+function getCollageSlotRect(slot, canvasWidth, canvasHeight, gap) {
+  const slotX = Math.round(slot.x * canvasWidth);
+  const slotY = Math.round(slot.y * canvasHeight);
+  const slotW = Math.round(slot.w * canvasWidth);
+  const slotH = Math.round(slot.h * canvasHeight);
+
+  return {
+    x: slotX + gap,
+    y: slotY + gap,
+    w: Math.max(1, slotW - (gap * 2)),
+    h: Math.max(1, slotH - (gap * 2))
+  };
+}
+
+// [ADDED]
+function getCollageFrameAtPoint(pointX, pointY, canvasWidth, canvasHeight, imageCount, layoutKey = 'auto') {
+  const layout = getCollageLayout(imageCount, layoutKey);
+  const gap = imageCount > 1 ? Math.max(8, Math.round(Math.min(canvasWidth, canvasHeight) * 0.008)) : 0;
+
+  for (let index = 0; index < Math.min(imageCount, layout.length); index++) {
+    const rect = getCollageSlotRect(layout[index], canvasWidth, canvasHeight, gap);
+    if (
+      pointX >= rect.x &&
+      pointX <= rect.x + rect.w &&
+      pointY >= rect.y &&
+      pointY <= rect.y + rect.h
+    ) {
+      return { index, rect };
+    }
+  }
+
+  return null;
+}
+
+// [UPDATED] Compose accepts layout and per-frame transforms.
+function composeCollageCanvas(images, maxDimension = COLLAGE_MAX_DIMENSION, layoutKey = 'auto', frameTransforms = []) {
   if (!images || !images.length) return null;
-  if (images.length === 1) return images[0];
 
   const canvas = document.createElement('canvas');
   canvas.width = maxDimension;
   canvas.height = maxDimension;
 
   const ctx = canvas.getContext('2d');
-  const layout = getCollageLayout(images.length);
-  const gap = Math.max(8, Math.round(maxDimension * 0.008));
+  const layout = getCollageLayout(images.length, layoutKey);
+  const gap = images.length > 1 ? Math.max(8, Math.round(maxDimension * 0.008)) : 0;
 
   ctx.fillStyle = '#020617';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -456,20 +559,13 @@ function composeCollageCanvas(images, maxDimension = COLLAGE_MAX_DIMENSION) {
     const img = images[index];
     if (!img) return;
 
-    const slotX = Math.round(slot.x * canvas.width);
-    const slotY = Math.round(slot.y * canvas.height);
-    const slotW = Math.round(slot.w * canvas.width);
-    const slotH = Math.round(slot.h * canvas.height);
-
-    const dx = slotX + gap;
-    const dy = slotY + gap;
-    const dw = Math.max(1, slotW - (gap * 2));
-    const dh = Math.max(1, slotH - (gap * 2));
+    const slotRect = getCollageSlotRect(slot, canvas.width, canvas.height, gap);
+    const frameTransform = clampFrameTransformToSlot(img, slotRect, frameTransforms[index]);
 
     ctx.save();
-    buildRoundedRectPath(ctx, dx, dy, dw, dh, Math.max(18, gap));
+    buildRoundedRectPath(ctx, slotRect.x, slotRect.y, slotRect.w, slotRect.h, Math.max(18, gap));
     ctx.clip();
-    drawImageCover(ctx, img, dx, dy, dw, dh);
+    drawImageCover(ctx, img, slotRect.x, slotRect.y, slotRect.w, slotRect.h, frameTransform);
     ctx.restore();
   });
 

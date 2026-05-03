@@ -22,7 +22,7 @@
 
 body { 
   margin: 0; 
-  font-family: 'Roboto', sans-serif; 
+  font-family: Arial, sans-serif;
   background: var(--bg-app); 
   color: var(--text-main); 
   overflow: hidden; 
@@ -641,6 +641,11 @@ canvas {
   grid-template-columns: 1fr 1fr; 
   gap: 10px; 
   margin-bottom: 16px;
+}
+
+/* [ADDED] Supports Gallery, Add Photo, and Camera in the existing upload row. */
+.input-group-row-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 /* CAMERA MODAL */
