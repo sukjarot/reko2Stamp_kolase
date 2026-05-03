@@ -270,7 +270,7 @@ function syncSelectedStampFromControls() {
   stamp.opacity = parseInt(opacitySlider.value, 10);
   stamp.color = fontColor.value || '#ffffff';
   stamp.fontFamily = fontSelect.value || 'Roboto';
-  constrainStampTextPosition(ctx, stamp, canvas.width);
+  constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
 
   sizeValDisplay.textContent = `${stamp.size}px`;
   opacityValDisplay.textContent = `${stamp.opacity}%`;
@@ -281,7 +281,7 @@ function scaleStampPositions(previousWidth, previousHeight, nextWidth, nextHeigh
   if (!previousWidth || !previousHeight || !nextWidth || !nextHeight) {
     stamps.forEach((stamp, index) => {
       Object.assign(stamp, getDefaultStampPosition(index));
-      constrainStampTextPosition(ctx, stamp, nextWidth || canvas.width);
+      constrainStampTextPosition(ctx, stamp, nextWidth || canvas.width, nextHeight || canvas.height);
     });
     return;
   }
@@ -292,7 +292,7 @@ function scaleStampPositions(previousWidth, previousHeight, nextWidth, nextHeigh
   stamps.forEach((stamp) => {
     stamp.x *= ratioX;
     stamp.y *= ratioY;
-    constrainStampTextPosition(ctx, stamp, nextWidth);
+    constrainStampTextPosition(ctx, stamp, nextWidth, nextHeight);
   });
 }
 
@@ -358,7 +358,7 @@ function addStamp() {
     textAlign: baseStamp ? getStampTextAlign(baseStamp) : 'left'
   });
 
-  constrainStampTextPosition(ctx, newStamp, canvas.width);
+  constrainStampTextPosition(ctx, newStamp, canvas.width, canvas.height);
   stamps.push(newStamp);
   selectStamp(newStamp.id, true);
 }
@@ -506,7 +506,7 @@ function handlePointerMove(clientX, clientY) {
 
     stamp.x = pos.x - (dragStartPos.offsetX || 0);
     stamp.y = pos.y - (dragStartPos.offsetY || 0);
-    constrainStampTextPosition(ctx, stamp, canvas.width);
+    constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
 
     requestRender();
     return;
@@ -538,7 +538,7 @@ function handlePointerUp() {
   if (activeDragStampId) {
     const stamp = stamps.find((item) => item.id === activeDragStampId);
     if (stamp) {
-      constrainStampTextPosition(ctx, stamp, canvas.width);
+      constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
       requestRender();
     }
   }
@@ -769,7 +769,7 @@ locInput.addEventListener('input', () => {
   const stamp = getSelectedStamp();
   if (!stamp) return;
   stamp.location = locInput.value.trim();
-  constrainStampTextPosition(ctx, stamp, canvas.width);
+  constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
   requestRender();
 });
 
@@ -777,7 +777,7 @@ document.addEventListener('reko:location-updated', (event) => {
   const stamp = getSelectedStamp();
   if (!stamp) return;
   stamp.location = (event.detail && event.detail.value ? event.detail.value : '').trim();
-  constrainStampTextPosition(ctx, stamp, canvas.width);
+  constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
   requestRender();
 });
 
@@ -791,7 +791,7 @@ alignButtons.forEach((button) => {
     if (!stamp) return;
 
     stamp.textAlign = button.dataset.align || 'left';
-    constrainStampTextPosition(ctx, stamp, canvas.width);
+    constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
     syncAlignButtons(stamp);
     requestRender();
   });
@@ -804,7 +804,7 @@ resetViewBtn.addEventListener('click', () => {
   resetViewport();
   stamps.forEach((stamp, index) => {
     Object.assign(stamp, getDefaultStampPosition(index));
-    constrainStampTextPosition(ctx, stamp, canvas.width);
+    constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
   });
   requestRender();
 });

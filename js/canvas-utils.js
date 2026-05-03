@@ -208,7 +208,7 @@ function getPos(clientX, clientY, canvas, viewScale = 1, viewX = 0, viewY = 0) {
   return getCanvasPointFromClient(clientX, clientY, canvas, viewScale, viewX, viewY);
 }
 
-function constrainStampTextPosition(ctx, stamp, canvasWidth, padding = 20) {
+function constrainStampTextPosition(ctx, stamp, canvasWidth, canvasHeight, padding = 20) {
   if (!stamp) return 'left';
 
   const textAlign = getStampTextAlign(stamp);
@@ -217,37 +217,40 @@ function constrainStampTextPosition(ctx, stamp, canvasWidth, padding = 20) {
   const bbox = getTextBoundingBox(ctx, stamp);
   if (!bbox) {
     stamp.x = clampValue(stamp.x, padding, canvasWidth - padding);
+    if (canvasHeight) {
+      stamp.y = clampValue(stamp.y, padding, canvasHeight - padding);
+    }
     return textAlign;
   }
 
+  // Constrain horizontal position (X axis)
   const availableWidth = Math.max(0, canvasWidth - (padding * 2));
   if (bbox.w >= availableWidth) {
     if (textAlign === 'right') {
       stamp.x = canvasWidth - padding;
-      return textAlign;
-    }
-
-    if (textAlign === 'center') {
+    } else if (textAlign === 'center') {
       stamp.x = canvasWidth / 2;
-      return textAlign;
+    } else {
+      stamp.x = padding;
     }
-
-    stamp.x = padding;
-    return textAlign;
+  } else {
+    if (textAlign === 'right') {
+      stamp.x = clampValue(stamp.x, padding + bbox.w, canvasWidth - padding);
+    } else if (textAlign === 'center') {
+      const halfWidth = bbox.w / 2;
+      stamp.x = clampValue(stamp.x, padding + halfWidth, canvasWidth - padding - halfWidth);
+    } else {
+      stamp.x = clampValue(stamp.x, padding, canvasWidth - padding - bbox.w);
+    }
   }
 
-  if (textAlign === 'right') {
-    stamp.x = clampValue(stamp.x, padding + bbox.w, canvasWidth - padding);
-    return textAlign;
+  // Constrain vertical position (Y axis) if canvasHeight is provided
+  if (canvasHeight) {
+    const minY = bbox.y - bbox.h + padding;
+    const maxY = canvasHeight - padding;
+    stamp.y = clampValue(stamp.y, minY, maxY);
   }
 
-  if (textAlign === 'center') {
-    const halfWidth = bbox.w / 2;
-    stamp.x = clampValue(stamp.x, padding + halfWidth, canvasWidth - padding - halfWidth);
-    return textAlign;
-  }
-
-  stamp.x = clampValue(stamp.x, padding, canvasWidth - padding - bbox.w);
   return textAlign;
 }
 
