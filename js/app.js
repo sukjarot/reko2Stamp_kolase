@@ -16,6 +16,8 @@ let imgLoaded = false;
 
 let collageImages = [];
 let collageFrameTransforms = [];
+let originalCollageImages = [];
+let originalSelectedLayoutKey = 'auto';
 // [ADDED]
 let selectedLayoutKey = 'auto';
 let stamps = [];
@@ -165,6 +167,44 @@ function ensureCollageFrameTransforms() {
 // [ADDED]
 function resetCollageFrameTransforms() {
   collageFrameTransforms = collageImages.map(() => getDefaultFrameTransform());
+}
+
+function saveOriginalCollageState(images = collageImages) {
+  originalCollageImages = [...images];
+  originalSelectedLayoutKey = selectedLayoutKey;
+}
+
+function resetImageAdjustments() {
+  if (!imgLoaded && !originalCollageImages.length) return;
+
+  if (cropMode) {
+    cancelCrop();
+  } else {
+    cropRect = null;
+    cropAction = null;
+    toggleCropBtn.textContent = 'Potong';
+    toggleCropBtn.classList.remove('btn-danger');
+    toggleCropBtn.classList.add('btn-secondary');
+  }
+
+  activeFrameIndex = null;
+  initialFrameTransform = null;
+  pinchFrameIndex = null;
+  setPanningState(false);
+
+  if (originalCollageImages.length) {
+    selectedLayoutKey = originalSelectedLayoutKey || 'auto';
+    if (layoutSelect) {
+      layoutSelect.value = selectedLayoutKey;
+    }
+    collageImages = [...originalCollageImages];
+    resetCollageFrameTransforms();
+    rebuildCollageSource();
+    return;
+  }
+
+  resetCollageFrameTransforms();
+  rebuildCollageSource();
 }
 
 // [ADDED]
@@ -835,6 +875,7 @@ async function replaceCollageWithFiles(fileList) {
   const images = await Promise.all(limitedFiles.map(loadImageFromFile));
   collageImages = images;
   resetCollageFrameTransforms();
+  saveOriginalCollageState(collageImages);
   rebuildCollageSource();
 }
 
@@ -861,6 +902,10 @@ async function appendCollageWithFiles(fileList) {
     ...collageFrameTransforms,
     ...images.map(() => getDefaultFrameTransform())
   ];
+  saveOriginalCollageState(originalCollageImages.length
+    ? [...originalCollageImages, ...images]
+    : collageImages
+  );
   rebuildCollageSource();
 }
 
@@ -874,6 +919,10 @@ function appendCapturedImage(imageSource) {
 
   collageImages = [...collageImages, imageSource];
   collageFrameTransforms = [...collageFrameTransforms, getDefaultFrameTransform()];
+  saveOriginalCollageState(originalCollageImages.length
+    ? [...originalCollageImages, imageSource]
+    : collageImages
+  );
   rebuildCollageSource();
 }
 
@@ -1136,12 +1185,7 @@ addStampBtn.addEventListener('click', addStamp);
 deleteStampBtn.addEventListener('click', deleteSelectedStamp);
 
 resetViewBtn.addEventListener('click', () => {
-  resetViewport();
-  stamps.forEach((stamp, index) => {
-    Object.assign(stamp, getDefaultStampPosition(index));
-    constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
-  });
-  requestRender();
+  resetImageAdjustments();
 });
 
 clearBtn.addEventListener('click', () => {
@@ -1149,6 +1193,8 @@ clearBtn.addEventListener('click', () => {
 
   collageImages = [];
   collageFrameTransforms = [];
+  originalCollageImages = [];
+  originalSelectedLayoutKey = selectedLayoutKey;
   sourceImage = null;
   isUsingCanvasSource = false;
   imgLoaded = false;

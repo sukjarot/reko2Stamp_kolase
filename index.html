@@ -58,7 +58,14 @@
         <button id="openCameraBtn" class="btn-camera">📷 Foto</button>
       </div>
 
-      <div id="collageInfo" class="panel-note">Kolase: 0/5 foto</div>
+      <div class="collage-action-group">
+        <div id="collageInfo" class="panel-note">Kolase: 0/3 foto</div>
+        <div class="action-grid quick-action-grid">
+          <button id="resetView" class="main-btn btn-secondary" type="button">↺ Reset</button>
+          <button id="rotateBtn" class="main-btn btn-secondary" type="button">⤵ Putar</button>
+          <button id="toggleCrop" class="main-btn btn-secondary" type="button">✂ Potong</button>
+        </div>
+      </div>
 
       <!-- [ADDED] Config-based collage layout selector. -->
       <div>
@@ -166,15 +173,7 @@
             <button id="addStampBtn" class="main-btn btn-secondary" type="button">+ Tambah Stamp</button>
             <button id="deleteStampBtn" class="main-btn btn-danger" type="button">Hapus Stamp</button>
           </div>
-          <div class="panel-note">Scroll untuk zoom, drag area kosong untuk geser gambar, drag stamp untuk pindah posisi.</div>
         </div>
-      </div>
-
-      <!-- ACTION BUTTONS -->
-      <div class="action-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-top: 25px; gap: 12px;">
-        <button id="resetView" class="main-btn btn-secondary" style="padding: 12px 5px; font-size: 0.8rem;">↺ Reset</button>
-        <button id="rotateBtn" class="main-btn btn-secondary" style="padding: 12px 5px; font-size: 0.8rem;">⤵ Putar</button>
-        <button id="toggleCrop" class="main-btn btn-secondary" style="padding: 12px 5px; font-size: 0.8rem;">✂ Potong</button>
       </div>
 
       <button id="clearBtn" class="main-btn btn-danger" style="margin-top: 10px; margin-bottom: 10px;">🗑 Hapus Foto</button>
