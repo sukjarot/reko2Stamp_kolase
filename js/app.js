@@ -43,6 +43,7 @@ let initialPinchDist = 0;
 let initialScale = 1;
 let isDrawing = false;
 let isCollageRenderQueued = false;
+let selectedStampFlashFrameId = null;
 let isPanning = false;
 let panStartX = 0;
 let panStartY = 0;
@@ -116,8 +117,28 @@ function requestRender() {
     requestAnimationFrame(() => {
       draw();
       isDrawing = false;
+      syncSelectedStampFlash();
     });
   }
+}
+
+function syncSelectedStampFlash() {
+  const shouldFlash = !!(selectedStampId && imgLoaded && !cropMode);
+
+  if (!shouldFlash) {
+    if (selectedStampFlashFrameId !== null) {
+      cancelAnimationFrame(selectedStampFlashFrameId);
+      selectedStampFlashFrameId = null;
+    }
+    return;
+  }
+
+  if (selectedStampFlashFrameId !== null) return;
+
+  selectedStampFlashFrameId = requestAnimationFrame(() => {
+    selectedStampFlashFrameId = null;
+    requestRender();
+  });
 }
 
 function updateTransform() {

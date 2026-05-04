@@ -205,10 +205,20 @@ function drawSelectedStampOutline(ctx, stamp) {
   const bbox = getTextBoundingBox(ctx, stamp);
   if (!bbox) return;
 
+  const flash = (Math.sin(performance.now() / 130) + 1) / 2;
+  const alpha = 0.35 + (flash * 0.65);
+  const glowAlpha = 0.25 + (flash * 0.35);
+
   ctx.save();
-  ctx.strokeStyle = 'rgba(59, 130, 246, 0.95)';
+  ctx.strokeStyle = `rgba(255, 255, 255, ${glowAlpha})`;
+  ctx.lineWidth = Math.max(5, stamp.size * 0.11);
+  ctx.setLineDash([]);
+  ctx.strokeRect(bbox.x - 10, bbox.y - 10, bbox.w + 20, bbox.h + 20);
+
+  ctx.strokeStyle = `rgba(59, 130, 246, ${alpha})`;
   ctx.lineWidth = Math.max(2, stamp.size * 0.05);
   ctx.setLineDash([10, 6]);
+  ctx.lineDashOffset = -performance.now() / 70;
   ctx.strokeRect(bbox.x - 10, bbox.y - 10, bbox.w + 20, bbox.h + 20);
   ctx.restore();
 }
@@ -311,9 +321,10 @@ function constrainStampTextPosition(ctx, stamp, canvasWidth, canvasHeight, paddi
 
   // Constrain vertical position (Y axis) if canvasHeight is provided
   if (canvasHeight) {
-    const minY = bbox.y - bbox.h + padding;
-    const maxY = canvasHeight - padding;
-    stamp.y = clampValue(stamp.y, minY, maxY);
+    const availableHeight = Math.max(0, canvasHeight - (padding * 2));
+    const minY = padding + stamp.size;
+    const maxY = canvasHeight - padding - bbox.h + stamp.size;
+    stamp.y = bbox.h >= availableHeight ? minY : clampValue(stamp.y, minY, maxY);
   }
 
   return textAlign;
