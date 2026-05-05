@@ -735,8 +735,6 @@ function handlePointerDown(clientX, clientY) {
     return;
   }
 
-  clearStampSelection();
-
   const frameHit = getFrameHitAtCanvasPoint(pos);
   if (frameHit) {
     ensureCollageFrameTransforms();
