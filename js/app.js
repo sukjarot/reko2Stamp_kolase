@@ -47,6 +47,7 @@ let selectedStampFlashFrameId = null;
 let isPanning = false;
 let panStartX = 0;
 let panStartY = 0;
+let canvasDragDepth = 0;
 
 const fileInput = document.getElementById('fileInput');
 const addPhotoInput = document.getElementById('addPhotoInput');
@@ -881,6 +882,41 @@ function loadImageFromFile(file) {
   });
 }
 
+function isDesktopFileDropAvailable() {
+  return window.matchMedia('(hover: hover) and (pointer: fine)').matches || window.innerWidth > 768;
+}
+
+function getImageFilesFromDataTransfer(dataTransfer) {
+  return Array.from(dataTransfer && dataTransfer.files ? dataTransfer.files : [])
+    .filter((file) => file.type.startsWith('image/'));
+}
+
+function hasImageFileInDataTransfer(dataTransfer) {
+  if (!dataTransfer) return false;
+
+  const items = Array.from(dataTransfer.items || []);
+  if (items.length) {
+    return items.some((item) => item.kind === 'file' && item.type.startsWith('image/'));
+  }
+
+  return getImageFilesFromDataTransfer(dataTransfer).length > 0;
+}
+
+function setCanvasDropState(isActive) {
+  canvasContainer.classList.toggle('is-drag-over', isActive);
+}
+
+async function importDroppedImageFiles(fileList) {
+  const files = getImageFilesFromDataTransfer({ files: fileList });
+  if (!files.length) return;
+
+  if (collageImages.length) {
+    await appendCollageWithFiles(files);
+  } else {
+    await replaceCollageWithFiles(files);
+  }
+}
+
 // [UPDATED] Original gallery upload still replaces the collage.
 async function replaceCollageWithFiles(fileList) {
   const files = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
@@ -1021,6 +1057,51 @@ canvasContainer.addEventListener('wheel', (e) => {
 
   applyZoom(viewScale * zoomStep, e.clientX, e.clientY);
 }, { passive: false });
+
+canvasContainer.addEventListener('dragenter', (e) => {
+  if (!isDesktopFileDropAvailable() || !hasImageFileInDataTransfer(e.dataTransfer)) return;
+
+  e.preventDefault();
+  canvasDragDepth += 1;
+  setCanvasDropState(true);
+});
+
+canvasContainer.addEventListener('dragover', (e) => {
+  if (!isDesktopFileDropAvailable() || !hasImageFileInDataTransfer(e.dataTransfer)) return;
+
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  setCanvasDropState(true);
+});
+
+canvasContainer.addEventListener('dragleave', (e) => {
+  if (!isDesktopFileDropAvailable() || (!canvasDragDepth && !hasImageFileInDataTransfer(e.dataTransfer))) return;
+
+  e.preventDefault();
+  canvasDragDepth = Math.max(0, canvasDragDepth - 1);
+  if (!canvasDragDepth) {
+    setCanvasDropState(false);
+  }
+});
+
+canvasContainer.addEventListener('drop', async (e) => {
+  if (!isDesktopFileDropAvailable() || !hasImageFileInDataTransfer(e.dataTransfer)) {
+    canvasDragDepth = 0;
+    setCanvasDropState(false);
+    return;
+  }
+
+  e.preventDefault();
+  canvasDragDepth = 0;
+  setCanvasDropState(false);
+
+  try {
+    await importDroppedImageFiles(e.dataTransfer.files);
+  } catch (err) {
+    console.error('Gagal memuat foto dari drag-and-drop:', err);
+    alert('Foto gagal dimuat. Coba seret file gambar lain.');
+  }
+});
 
 fileInput.addEventListener('change', async (e) => {
   try {
