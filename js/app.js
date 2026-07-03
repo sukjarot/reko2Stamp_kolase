@@ -87,6 +87,8 @@ const imageImportPromptText = document.getElementById('imageImportPromptText');
 const replaceImageChoice = document.getElementById('replaceImageChoice');
 const appendImageChoice = document.getElementById('appendImageChoice');
 const cancelImageChoice = document.getElementById('cancelImageChoice');
+const toastNotification = document.getElementById('toastNotification');
+let toastTimeout = null;
 
 const storageBtn = document.getElementById('storageBtn');
 const storageModal = document.getElementById('storageModal');
@@ -129,6 +131,20 @@ function requestRender() {
       syncSelectedStampFlash();
     });
   }
+}
+
+function showToast(message, type = 'info') {
+  if (!toastNotification) return;
+  toastNotification.textContent = message;
+  toastNotification.className = `toast-notification show ${type}`;
+  toastNotification.hidden = false;
+  if (toastTimeout) {
+    clearTimeout(toastTimeout);
+  }
+  toastTimeout = setTimeout(() => {
+    toastNotification.classList.remove('show');
+    toastTimeout = null;
+  }, 2600);
 }
 
 function syncSelectedStampFlash() {
@@ -290,6 +306,7 @@ async function importImageFilesWithChoice(fileList) {
 function removeCollageImageAt(index) {
   if (index < 0 || index >= collageImages.length) return;
 
+  const removedIndex = index;
   collageImages.splice(index, 1);
   collageFrameTransforms.splice(index, 1);
   originalCollageImages = [...collageImages];
@@ -311,10 +328,12 @@ function removeCollageImageAt(index) {
     resetViewport();
     updateCollageInfo();
     requestRender();
+    showToast('Foto dihapus dari kolase.', 'success');
     return;
   }
 
   rebuildCollageSource();
+  showToast(`Foto ${removedIndex + 1} dihapus dari kolase.`, 'success');
 }
 
 // [ADDED]
@@ -1104,6 +1123,7 @@ function replaceCollageWithImages(images) {
   resetCollageFrameTransforms();
   saveOriginalCollageState(collageImages);
   rebuildCollageSource();
+  showToast(images.length === 1 ? 'Foto diganti.' : `${images.length} foto berhasil diganti.`, 'success');
 }
 
 function appendCollageImages(images) {
@@ -1133,6 +1153,7 @@ function appendCollageImages(images) {
     : collageImages
   );
   rebuildCollageSource();
+  showToast(nextImages.length === 1 ? 'Foto berhasil ditambahkan ke kolase.' : `${nextImages.length} foto berhasil ditambahkan.`, 'success');
 }
 
 // [UPDATED] Original gallery upload can now confirm replace or append.
@@ -1325,7 +1346,7 @@ fileInput.addEventListener('change', async (e) => {
 if (addPhotoInput) {
   addPhotoInput.addEventListener('change', async (e) => {
     try {
-      await appendCollageWithFiles(e.target.files);
+      await importImageFilesWithChoice(e.target.files);
     } catch (err) {
       console.error('Gagal menambah foto:', err);
       alert('Foto gagal dimuat. Coba pilih file lain.');
@@ -1554,6 +1575,7 @@ clearBtn.addEventListener('click', () => {
   syncControlsFromStamp(stamps[0]);
   updateCollageInfo();
   requestRender();
+  showToast('Semua foto dihapus.', 'success');
 });
 
 const oldDownloadBtn = document.getElementById('downloadFinal');
