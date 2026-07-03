@@ -1,4 +1,4 @@
-const CACHE_NAME = 'reko2stamp.kolase-v4';
+const CACHE_NAME = 'reko2stamp.kolase-v5';
 const APP_ROOT = new URL(self.registration.scope || './', self.location.href);
 
 const ASSETS_TO_CACHE = [
