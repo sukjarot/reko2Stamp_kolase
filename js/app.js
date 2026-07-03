@@ -677,6 +677,10 @@ function clearCollageSelection() {
   requestRender();
 }
 
+function isCollageSelectionControl(target) {
+  return !!(collageSlotList && target && collageSlotList.contains(target));
+}
+
 function waitForNextFrame() {
   return new Promise((resolve) => {
     requestAnimationFrame(() => resolve());
@@ -1003,6 +1007,7 @@ function handlePointerDown(clientX, clientY) {
     return;
   }
 
+  clearCollageSelection();
   setPanningState(true);
   panStartX = clientX;
   panStartY = clientY;
@@ -1312,9 +1317,21 @@ canvasContainer.addEventListener('touchmove', (e) => {
 
 canvasContainer.addEventListener('touchend', handlePointerUp);
 
+document.addEventListener('touchstart', (e) => {
+  if (!imgLoaded) return;
+  if (canvasContainer.contains(e.target) || isCollageSelectionControl(e.target)) return;
+  clearCollageSelection();
+}, { passive: true });
+
 canvasContainer.addEventListener('mousedown', (e) => {
   if (!imgLoaded || e.button !== 0) return;
   handlePointerDown(e.clientX, e.clientY);
+});
+
+document.addEventListener('mousedown', (e) => {
+  if (!imgLoaded || e.button !== 0) return;
+  if (canvasContainer.contains(e.target) || isCollageSelectionControl(e.target)) return;
+  clearCollageSelection();
 });
 
 window.addEventListener('mousemove', (e) => {
