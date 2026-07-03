@@ -28,6 +28,8 @@ let activeFrameIndex = null;
 let initialFrameTransform = null;
 let pinchFrameIndex = null;
 let initialFrameScale = 1;
+let selectedCollageImageIndex = null;
+let pendingImportChoiceResolve = null;
 
 let viewScale = 1;
 let viewX = 0;
@@ -59,6 +61,7 @@ const gpsBtn = document.getElementById('gpsBtn');
 const gpsFollowBtn = document.getElementById('gpsFollowBtn');
 const suggestionsBox = document.getElementById('suggestions');
 const collageInfo = document.getElementById('collageInfo');
+const collageSlotList = document.getElementById('collageSlotList');
 
 const sizeSlider = document.getElementById('sizeSlider');
 const sizeValDisplay = document.getElementById('sizeVal');
@@ -79,6 +82,11 @@ const rotateBtn = document.getElementById('rotateBtn');
 const canvasContainer = document.getElementById('canvasContainer');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+const imageImportPrompt = document.getElementById('imageImportPrompt');
+const imageImportPromptText = document.getElementById('imageImportPromptText');
+const replaceImageChoice = document.getElementById('replaceImageChoice');
+const appendImageChoice = document.getElementById('appendImageChoice');
+const cancelImageChoice = document.getElementById('cancelImageChoice');
 
 const storageBtn = document.getElementById('storageBtn');
 const storageModal = document.getElementById('storageModal');
@@ -177,6 +185,136 @@ function updateCollageInfo() {
     const capacity = getCollageFrameCapacity(selectedLayoutKey);
     collageInfo.textContent = `Kolase: ${collageImages.length}/${capacity} foto`;
   }
+  renderCollageSlots();
+}
+
+function clampSelectedCollageImageIndex() {
+  if (!collageImages.length) {
+    selectedCollageImageIndex = null;
+    return;
+  }
+
+  if (
+    selectedCollageImageIndex === null ||
+    selectedCollageImageIndex < 0 ||
+    selectedCollageImageIndex >= collageImages.length
+  ) {
+    selectedCollageImageIndex = collageImages.length - 1;
+  }
+}
+
+function renderCollageSlots() {
+  if (!collageSlotList) return;
+
+  clampSelectedCollageImageIndex();
+  collageSlotList.innerHTML = collageImages.map((_, index) => {
+    const isActive = index === selectedCollageImageIndex;
+    return `
+      <div class="collage-slot-row${isActive ? ' is-active' : ''}" data-index="${index}">
+        <button class="collage-slot-select" type="button" data-action="select" data-index="${index}">
+          Foto ${index + 1}${isActive ? ' - dipilih' : ''}
+        </button>
+        <button class="collage-slot-delete" type="button" data-action="delete" data-index="${index}">
+          Hapus
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectCollageImage(index) {
+  if (index < 0 || index >= collageImages.length) return;
+
+  selectedCollageImageIndex = index;
+  renderCollageSlots();
+  requestRender();
+}
+
+function resolveImageImportChoice(choice) {
+  if (!pendingImportChoiceResolve) return;
+
+  const resolve = pendingImportChoiceResolve;
+  pendingImportChoiceResolve = null;
+
+  if (imageImportPrompt) {
+    imageImportPrompt.hidden = true;
+  }
+
+  resolve(choice);
+}
+
+function requestImageImportChoice(fileCount) {
+  if (!collageImages.length) return Promise.resolve('replace');
+
+  const capacity = getActiveFrameCapacity();
+  const remainingSlots = Math.max(0, capacity - collageImages.length);
+  const noun = fileCount === 1 ? 'foto' : 'foto';
+
+  if (imageImportPromptText) {
+    imageImportPromptText.textContent = remainingSlots
+      ? `${fileCount} ${noun} siap dimuat. Ganti semua foto saat ini atau tambahkan ke kolase?`
+      : `Kolase sudah penuh (${capacity} foto). Ganti semua foto saat ini atau batal.`;
+  }
+
+  if (appendImageChoice) {
+    appendImageChoice.disabled = remainingSlots <= 0;
+    appendImageChoice.textContent = remainingSlots > 0 ? 'Tambah' : 'Penuh';
+  }
+
+  if (!imageImportPrompt) {
+    return Promise.resolve(confirm('Ganti foto saat ini?') ? 'replace' : 'cancel');
+  }
+
+  if (pendingImportChoiceResolve) {
+    resolveImageImportChoice('cancel');
+  }
+
+  imageImportPrompt.hidden = false;
+  return new Promise((resolve) => {
+    pendingImportChoiceResolve = resolve;
+  });
+}
+
+async function importImageFilesWithChoice(fileList) {
+  const files = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
+  if (!files.length) return;
+
+  const choice = await requestImageImportChoice(files.length);
+  if (choice === 'replace') {
+    await replaceCollageWithFiles(files);
+  } else if (choice === 'append') {
+    await appendCollageWithFiles(files);
+  }
+}
+
+function removeCollageImageAt(index) {
+  if (index < 0 || index >= collageImages.length) return;
+
+  collageImages.splice(index, 1);
+  collageFrameTransforms.splice(index, 1);
+  originalCollageImages = [...collageImages];
+  originalSelectedLayoutKey = selectedLayoutKey;
+
+  if (selectedCollageImageIndex !== null) {
+    selectedCollageImageIndex = Math.min(selectedCollageImageIndex, collageImages.length - 1);
+    if (selectedCollageImageIndex < 0) selectedCollageImageIndex = null;
+  }
+
+  if (cropMode) {
+    cancelCrop();
+  }
+
+  if (!collageImages.length) {
+    sourceImage = null;
+    isUsingCanvasSource = false;
+    imgLoaded = false;
+    resetViewport();
+    updateCollageInfo();
+    requestRender();
+    return;
+  }
+
+  rebuildCollageSource();
 }
 
 // [ADDED]
@@ -591,12 +729,14 @@ function rebuildCollageSource() {
     sourceImage = null;
     isUsingCanvasSource = false;
     imgLoaded = false;
+    selectedCollageImageIndex = null;
     updateCollageInfo();
     requestRender();
     return;
   }
 
   validateLayoutKey();
+  clampSelectedCollageImageIndex();
   const composedSource = composeCurrentCollageSource();
 
   applySourceImage(composedSource, !(composedSource instanceof HTMLImageElement));
@@ -640,6 +780,46 @@ function deleteSelectedStamp() {
   selectStamp(nextStamp.id, true);
 }
 
+function drawSelectedCollageImageOutline() {
+  if (
+    cropMode ||
+    selectedCollageImageIndex === null ||
+    selectedCollageImageIndex < 0 ||
+    selectedCollageImageIndex >= getVisibleCollageCount()
+  ) {
+    return;
+  }
+
+  const hit = getCollageFrameAtPoint(
+    canvas.width / 2,
+    canvas.height / 2,
+    canvas.width,
+    canvas.height,
+    1,
+    'auto'
+  );
+  const layout = getCollageLayout(getVisibleCollageCount(), selectedLayoutKey);
+  const slot = layout[selectedCollageImageIndex];
+  const rect = slot
+    ? getCollageSlotRect(
+      slot,
+      canvas.width,
+      canvas.height,
+      getVisibleCollageCount() > 1 ? Math.max(8, Math.round(Math.min(canvas.width, canvas.height) * 0.008)) : 0
+    )
+    : (hit ? hit.rect : null);
+
+  if (!rect) return;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(96, 165, 250, 0.95)';
+  ctx.lineWidth = Math.max(4, Math.round(Math.min(canvas.width, canvas.height) * 0.004));
+  ctx.setLineDash([18, 10]);
+  ctx.lineDashOffset = -performance.now() / 60;
+  ctx.strokeRect(rect.x + 2, rect.y + 2, Math.max(1, rect.w - 4), Math.max(1, rect.h - 4));
+  ctx.restore();
+}
+
 // [UPDATED] Existing render pipeline preserved; source photo draw supports one-frame transforms.
 function draw() {
   if (!imgLoaded || !sourceImage) {
@@ -665,6 +845,8 @@ function draw() {
   } else {
     ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
   }
+
+  drawSelectedCollageImageOutline();
 
   stamps.forEach((stamp) => {
     const text = buildStampText(stamp);
@@ -740,8 +922,11 @@ function handlePointerDown(clientX, clientY) {
   if (frameHit) {
     ensureCollageFrameTransforms();
     activeFrameIndex = frameHit.index;
+    selectedCollageImageIndex = frameHit.index;
+    renderCollageSlots();
     initialFrameTransform = normalizeFrameTransform(collageFrameTransforms[activeFrameIndex]);
     setPanningState(true);
+    requestRender();
     return;
   }
 
@@ -910,14 +1095,47 @@ async function importDroppedImageFiles(fileList) {
   const files = getImageFilesFromDataTransfer({ files: fileList });
   if (!files.length) return;
 
-  if (collageImages.length) {
-    await appendCollageWithFiles(files);
-  } else {
-    await replaceCollageWithFiles(files);
-  }
+  await importImageFilesWithChoice(files);
 }
 
-// [UPDATED] Original gallery upload still replaces the collage.
+function replaceCollageWithImages(images) {
+  collageImages = images;
+  selectedCollageImageIndex = images.length ? 0 : null;
+  resetCollageFrameTransforms();
+  saveOriginalCollageState(collageImages);
+  rebuildCollageSource();
+}
+
+function appendCollageImages(images) {
+  if (!images.length) return;
+
+  const capacity = getActiveFrameCapacity();
+  const remainingSlots = Math.max(0, capacity - collageImages.length);
+  if (!remainingSlots) {
+    alert(`Layout ini sudah penuh (${capacity} foto). Pilih layout lain atau hapus foto lama dulu.`);
+    return;
+  }
+
+  const nextImages = images.slice(0, remainingSlots);
+  if (images.length > remainingSlots) {
+    alert(`Sisa frame hanya ${remainingSlots}. Foto selebihnya diabaikan.`);
+  }
+
+  const firstAddedIndex = collageImages.length;
+  collageImages = [...collageImages, ...nextImages];
+  collageFrameTransforms = [
+    ...collageFrameTransforms,
+    ...nextImages.map(() => getDefaultFrameTransform())
+  ];
+  selectedCollageImageIndex = firstAddedIndex;
+  saveOriginalCollageState(originalCollageImages.length
+    ? [...originalCollageImages, ...nextImages]
+    : collageImages
+  );
+  rebuildCollageSource();
+}
+
+// [UPDATED] Original gallery upload can now confirm replace or append.
 async function replaceCollageWithFiles(fileList) {
   const files = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
   if (!files.length) return;
@@ -928,10 +1146,7 @@ async function replaceCollageWithFiles(fileList) {
   }
 
   const images = await Promise.all(limitedFiles.map(loadImageFromFile));
-  collageImages = images;
-  resetCollageFrameTransforms();
-  saveOriginalCollageState(collageImages);
-  rebuildCollageSource();
+  replaceCollageWithImages(images);
 }
 
 // [ADDED]
@@ -941,44 +1156,36 @@ async function appendCollageWithFiles(fileList) {
 
   const capacity = getActiveFrameCapacity();
   const remainingSlots = Math.max(0, capacity - collageImages.length);
+  const limitedFiles = files.slice(0, remainingSlots);
   if (!remainingSlots) {
     alert(`Layout ini sudah penuh (${capacity} foto). Pilih layout lain atau hapus foto lama dulu.`);
     return;
   }
 
-  const limitedFiles = files.slice(0, remainingSlots);
   if (files.length > remainingSlots) {
     alert(`Sisa frame hanya ${remainingSlots}. Foto selebihnya diabaikan.`);
   }
 
   const images = await Promise.all(limitedFiles.map(loadImageFromFile));
-  collageImages = [...collageImages, ...images];
-  collageFrameTransforms = [
-    ...collageFrameTransforms,
-    ...images.map(() => getDefaultFrameTransform())
-  ];
-  saveOriginalCollageState(originalCollageImages.length
-    ? [...originalCollageImages, ...images]
-    : collageImages
-  );
-  rebuildCollageSource();
+  appendCollageImages(images);
 }
 
 // [UPDATED] Camera photos append into the next available frame.
 function appendCapturedImage(imageSource) {
-  const capacity = getActiveFrameCapacity();
-  if (collageImages.length >= capacity) {
-    alert(`Kolase maksimal ${capacity} foto untuk layout ini. Hapus foto lama dulu jika ingin menambah lagi.`);
-    return;
+  appendCollageImages([imageSource]);
+}
+
+async function importCapturedImageWithChoice(imageSource) {
+  const choice = await requestImageImportChoice(1);
+  if (choice === 'replace') {
+    replaceCollageWithImages([imageSource]);
+    return true;
+  } else if (choice === 'append') {
+    appendCapturedImage(imageSource);
+    return true;
   }
 
-  collageImages = [...collageImages, imageSource];
-  collageFrameTransforms = [...collageFrameTransforms, getDefaultFrameTransform()];
-  saveOriginalCollageState(originalCollageImages.length
-    ? [...originalCollageImages, imageSource]
-    : collageImages
-  );
-  rebuildCollageSource();
+  return false;
 }
 
 canvasContainer.addEventListener('touchstart', (e) => {
@@ -1105,7 +1312,7 @@ canvasContainer.addEventListener('drop', async (e) => {
 
 fileInput.addEventListener('change', async (e) => {
   try {
-    await replaceCollageWithFiles(e.target.files);
+    await importImageFilesWithChoice(e.target.files);
   } catch (err) {
     console.error('Gagal memuat foto:', err);
     alert('Foto gagal dimuat. Coba pilih file lain.');
@@ -1161,8 +1368,9 @@ setupCameraEvents(
   rotateCamBtn,
   cameraVideo,
   cameraModal,
-  (canvasSource) => {
-    appendCapturedImage(canvasSource);
+  async (canvasSource) => {
+    const imported = await importCapturedImageWithChoice(canvasSource);
+    if (!imported) return;
     dtInput.value = getCurrentIsoDateTime();
     syncSelectedStampFromControls();
   }
@@ -1186,6 +1394,7 @@ rotateBtn.addEventListener('click', () => {
     tempCtx.drawImage(sourceImage, -w / 2, -h / 2);
 
     collageImages = [tempCanvas];
+    selectedCollageImageIndex = 0;
     resetCollageFrameTransforms();
     rebuildCollageSource();
 
@@ -1204,6 +1413,7 @@ toggleCropBtn.addEventListener('click', () => {
       const croppedCanvas = applyCrop(sourceImage, isUsingCanvasSource, cropRect);
       if (croppedCanvas) {
         collageImages = [croppedCanvas];
+        selectedCollageImageIndex = 0;
         resetCollageFrameTransforms();
         rebuildCollageSource();
       }
@@ -1284,6 +1494,41 @@ alignButtons.forEach((button) => {
 addStampBtn.addEventListener('click', addStamp);
 deleteStampBtn.addEventListener('click', deleteSelectedStamp);
 
+if (replaceImageChoice) {
+  replaceImageChoice.addEventListener('click', () => resolveImageImportChoice('replace'));
+}
+
+if (appendImageChoice) {
+  appendImageChoice.addEventListener('click', () => {
+    if (appendImageChoice.disabled) return;
+    resolveImageImportChoice('append');
+  });
+}
+
+if (cancelImageChoice) {
+  cancelImageChoice.addEventListener('click', () => resolveImageImportChoice('cancel'));
+}
+
+if (collageSlotList) {
+  collageSlotList.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+
+    const index = parseInt(button.dataset.index, 10);
+    if (Number.isNaN(index)) return;
+
+    if (button.dataset.action === 'select') {
+      selectCollageImage(index);
+      return;
+    }
+
+    if (button.dataset.action === 'delete') {
+      if (!confirm(`Hapus Foto ${index + 1} dari kolase?`)) return;
+      removeCollageImageAt(index);
+    }
+  });
+}
+
 resetViewBtn.addEventListener('click', () => {
   resetImageAdjustments();
 });
@@ -1295,6 +1540,7 @@ clearBtn.addEventListener('click', () => {
   collageFrameTransforms = [];
   originalCollageImages = [];
   originalSelectedLayoutKey = selectedLayoutKey;
+  selectedCollageImageIndex = null;
   sourceImage = null;
   isUsingCanvasSource = false;
   imgLoaded = false;

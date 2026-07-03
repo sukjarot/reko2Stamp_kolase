@@ -60,6 +60,7 @@
 
       <div class="collage-action-group">
         <div id="collageInfo" class="panel-note">Kolase: 0/3 foto</div>
+        <div id="collageSlotList" class="collage-slot-list" aria-live="polite"></div>
         <div class="action-grid quick-action-grid">
           <button id="resetView" class="main-btn btn-secondary" type="button">↺ Reset</button>
           <button id="rotateBtn" class="main-btn btn-secondary" type="button">⤵ Putar</button>
@@ -197,6 +198,20 @@
       <canvas id="canvas"></canvas>
     </section>
   </main>
+
+  <div id="imageImportPrompt" class="image-import-prompt" hidden>
+    <div class="image-import-card" role="dialog" aria-modal="false" aria-labelledby="imageImportPromptTitle">
+      <div>
+        <strong id="imageImportPromptTitle">Foto baru dipilih</strong>
+        <p id="imageImportPromptText">Ganti foto saat ini atau tambahkan ke kolase?</p>
+      </div>
+      <div class="image-import-actions">
+        <button id="replaceImageChoice" class="main-btn btn-danger" type="button">Ganti</button>
+        <button id="appendImageChoice" class="main-btn btn-primary" type="button">Tambah</button>
+        <button id="cancelImageChoice" class="main-btn btn-secondary" type="button">Batal</button>
+      </div>
+    </div>
+  </div>
 
   <!-- CAMERA MODAL -->
   <div id="cameraModal" class="camera-modal">
