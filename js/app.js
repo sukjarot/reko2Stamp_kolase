@@ -91,6 +91,7 @@ let initialScale = 1;
 let isDrawing = false;
 let isCollageRenderQueued = false;
 let selectedStampFlashFrameId = null;
+let isExportRender = false;
 let isPanning = false;
 let panStartX = 0;
 let panStartY = 0;
@@ -681,12 +682,6 @@ function isCollageSelectionControl(target) {
   return !!(collageSlotList && target && collageSlotList.contains(target));
 }
 
-function waitForNextFrame() {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => resolve());
-  });
-}
-
 function ensureStampState() {
   if (!stamps.length) {
     stamps = [createStamp()];
@@ -923,7 +918,9 @@ function draw() {
     ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
   }
 
-  drawSelectedCollageImageOutline();
+  if (!isExportRender) {
+    drawSelectedCollageImageOutline();
+  }
 
   stamps.forEach((stamp) => {
     const text = buildStampText(stamp);
@@ -953,12 +950,21 @@ function draw() {
   });
 
   const selectedStamp = getSelectedStamp();
-  if (selectedStamp && !cropMode) {
+  if (selectedStamp && !cropMode && !isExportRender) {
     drawSelectedStampOutline(ctx, selectedStamp);
   }
 
-  if (cropMode) {
+  if (cropMode && !isExportRender) {
     drawCropUI(ctx, canvas, cropRect, viewScale);
+  }
+}
+
+function renderForExport() {
+  isExportRender = true;
+  try {
+    draw();
+  } finally {
+    isExportRender = false;
   }
 }
 
@@ -1658,8 +1664,9 @@ if (oldDownloadBtn) {
     if (!imgLoaded) return alert('Belum ada foto untuk disimpan!');
     clearStampSelection();
     clearCollageSelection();
-    await waitForNextFrame();
+    renderForExport();
     await savePhoto(canvas, filePrefixInput, fileCounterInput, dirHandle, filenamePreview);
+    requestRender();
   });
 }
 
