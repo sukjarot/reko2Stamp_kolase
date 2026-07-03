@@ -5,8 +5,46 @@
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
-      .then((reg) => console.log('Service Worker terdaftar!', reg.scope))
+      .then((reg) => {
+        console.log('Service Worker terdaftar!', reg.scope);
+
+        // Helper: send message to a service worker
+        function sendSkipWaitingMessage(sw) {
+          try {
+            sw.postMessage({ type: 'SKIP_WAITING' });
+          } catch (e) {
+            console.warn('Gagal mengirim pesan ke SW', e);
+          }
+        }
+
+        // If there's an updated worker already waiting, ask it to skip waiting
+        if (reg.waiting) {
+          sendSkipWaitingMessage(reg.waiting);
+        }
+
+        // When a new SW is found (installing), watch its state
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          if (!newSW) return;
+          newSW.addEventListener('statechange', () => {
+            if (newSW.state === 'installed') {
+              // If there's an existing controller, this is an update
+              if (navigator.serviceWorker.controller) {
+                sendSkipWaitingMessage(newSW);
+              }
+            }
+          });
+        });
+      })
       .catch((err) => console.log('Gagal daftar Service Worker:', err));
+
+    // When the controlling service worker changes, reload to apply the new one
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
   });
 }
 

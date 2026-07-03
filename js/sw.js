@@ -12,10 +12,9 @@ const ASSETS_TO_CACHE = [
   './js/location.js',
   './js/storage.js',
   './manifest.json',
-  './icon ultimate 2.png',
-  './sw.js',
-  './js/sw.js'
+  './icon ultimate 2.png'
 ];
+
 
 const NETWORK_ONLY_HOSTS = [
   'fonts.googleapis.com',
@@ -64,6 +63,14 @@ async function navigationFallback(request) {
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(cacheAppShell());
+});
+
+// Listen to messages from the page (used to trigger skipWaiting from client)
+self.addEventListener('message', (event) => {
+  if (!event.data) return;
+  if (event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {
