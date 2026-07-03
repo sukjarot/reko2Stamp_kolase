@@ -38,12 +38,19 @@ if ('serviceWorker' in navigator) {
       })
       .catch((err) => console.log('Gagal daftar Service Worker:', err));
 
-    // When the controlling service worker changes, reload to apply the new one
+    // When the controlling service worker changes, show update notification
+    // then reload to apply the new one.
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (refreshing) return;
       refreshing = true;
-      window.location.reload();
+      try {
+        showToast('Aplikasi diperbarui', 'success');
+      } catch (e) {
+        console.log('Aplikasi diperbarui — memuat ulang.');
+      }
+      // Allow the toast to be visible briefly before reloading
+      setTimeout(() => window.location.reload(), 1400);
     });
   });
 }
