@@ -670,6 +670,13 @@ function clearStampSelection() {
   requestRender();
 }
 
+function clearCollageSelection() {
+  if (selectedCollageImageIndex === null) return;
+  selectedCollageImageIndex = null;
+  renderCollageSlots();
+  requestRender();
+}
+
 function waitForNextFrame() {
   return new Promise((resolve) => {
     requestAnimationFrame(() => resolve());
@@ -876,11 +883,13 @@ function drawSelectedCollageImageOutline() {
   if (!rect) return;
 
   ctx.save();
-  ctx.strokeStyle = 'rgba(96, 165, 250, 0.95)';
-  ctx.lineWidth = Math.max(4, Math.round(Math.min(canvas.width, canvas.height) * 0.004));
-  ctx.setLineDash([18, 10]);
+  ctx.fillStyle = 'rgba(59, 130, 246, 0.08)';
+  ctx.fillRect(rect.x + 2, rect.y + 2, Math.max(1, rect.w - 4), Math.max(1, rect.h - 4));
+  ctx.strokeStyle = 'rgba(59, 130, 246, 0.95)';
+  ctx.lineWidth = Math.max(5, Math.round(Math.min(canvas.width, canvas.height) * 0.006));
+  ctx.setLineDash([16, 8]);
   ctx.lineDashOffset = -performance.now() / 60;
-  ctx.strokeRect(rect.x + 2, rect.y + 2, Math.max(1, rect.w - 4), Math.max(1, rect.h - 4));
+  ctx.strokeRect(rect.x + 1, rect.y + 1, Math.max(1, rect.w - 2), Math.max(1, rect.h - 2));
   ctx.restore();
 }
 
@@ -1631,6 +1640,7 @@ if (oldDownloadBtn) {
   newDownloadBtn.addEventListener('click', async () => {
     if (!imgLoaded) return alert('Belum ada foto untuk disimpan!');
     clearStampSelection();
+    clearCollageSelection();
     await waitForNextFrame();
     await savePhoto(canvas, filePrefixInput, fileCounterInput, dirHandle, filenamePreview);
   });
