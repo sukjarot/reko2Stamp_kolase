@@ -74,6 +74,7 @@ let initialFrameTransform = null;
 let pinchFrameIndex = null;
 let initialFrameScale = 1;
 let selectedCollageImageIndex = null;
+let dragSwapTargetIndex = null;
 let pendingImportChoiceResolve = null;
 
 let viewScale = 1;
@@ -415,6 +416,7 @@ function resetImageAdjustments() {
   activeFrameIndex = null;
   initialFrameTransform = null;
   pinchFrameIndex = null;
+  dragSwapTargetIndex = null;
   setPanningState(false);
 
   if (originalCollageImages.length) {
@@ -467,6 +469,20 @@ function getFrameHitAtCanvasPoint(pos) {
     getVisibleCollageCount(),
     selectedLayoutKey
   );
+}
+
+// [ADDED]
+function getCollageFrameSlotRect(frameIndex) {
+  if (frameIndex === null || frameIndex < 0 || frameIndex >= getVisibleCollageCount()) {
+    return null;
+  }
+
+  const layout = getCollageLayout(getVisibleCollageCount(), selectedLayoutKey);
+  const slot = layout[frameIndex];
+  if (!slot) return null;
+
+  const gap = getVisibleCollageCount() > 1 ? Math.max(8, Math.round(Math.min(canvas.width, canvas.height) * 0.008)) : 0;
+  return getCollageSlotRect(slot, canvas.width, canvas.height, gap);
 }
 
 // [ADDED]
@@ -892,6 +908,30 @@ function drawSelectedCollageImageOutline() {
   ctx.restore();
 }
 
+// [ADDED]
+function drawDragSwapTargetHighlight() {
+  if (
+    cropMode ||
+    dragSwapTargetIndex === null ||
+    dragSwapTargetIndex < 0 ||
+    dragSwapTargetIndex >= getVisibleCollageCount()
+  ) {
+    return;
+  }
+
+  const rect = getCollageFrameSlotRect(dragSwapTargetIndex);
+  if (!rect) return;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(34, 197, 94, 0.24)';
+  ctx.fillRect(rect.x + 3, rect.y + 3, Math.max(1, rect.w - 6), Math.max(1, rect.h - 6));
+  ctx.strokeStyle = 'rgba(34, 197, 94, 0.98)';
+  ctx.lineWidth = Math.max(8, Math.round(Math.min(canvas.width, canvas.height) * 0.01));
+  ctx.setLineDash([]);
+  ctx.strokeRect(rect.x + 2, rect.y + 2, Math.max(1, rect.w - 4), Math.max(1, rect.h - 4));
+  ctx.restore();
+}
+
 // [UPDATED] Existing render pipeline preserved; source photo draw supports one-frame transforms.
 function draw() {
   if (!imgLoaded || !sourceImage) {
@@ -920,6 +960,7 @@ function draw() {
 
   if (!isExportRender) {
     drawSelectedCollageImageOutline();
+    drawDragSwapTargetHighlight();
   }
 
   stamps.forEach((stamp) => {
@@ -972,6 +1013,7 @@ function renderForExport() {
 function handlePointerDown(clientX, clientY) {
   const pos = getCanvasPointFromClient(clientX, clientY, canvas, viewScale, viewX, viewY);
   dragStartPos = pos;
+  dragSwapTargetIndex = null;
 
   if (cropMode) {
     const hit = getHitRegion(pos.x, pos.y, cropRect, viewScale);
@@ -1067,6 +1109,32 @@ function handlePointerMove(clientX, clientY) {
   }
 
   if (activeFrameIndex !== null && initialFrameTransform) {
+    const frameHit = getFrameHitAtCanvasPoint(pos);
+    const nextSwapTargetIndex = frameHit && frameHit.index !== activeFrameIndex
+      ? frameHit.index
+      : null;
+
+    if (nextSwapTargetIndex !== null) {
+      if (dragSwapTargetIndex !== nextSwapTargetIndex) {
+        collageFrameTransforms[activeFrameIndex] = { ...initialFrameTransform };
+        dragSwapTargetIndex = nextSwapTargetIndex;
+        setPanningState(false);
+        requestCollageTransformRender();
+      }
+      return;
+    }
+
+    if (dragSwapTargetIndex !== null) {
+      dragSwapTargetIndex = null;
+      requestRender();
+
+      if (!frameHit || frameHit.index !== activeFrameIndex) {
+        return;
+      }
+
+      setPanningState(true);
+    }
+
     const dx = pos.x - dragStartPos.x;
     const dy = pos.y - dragStartPos.y;
     applyFrameTransform(activeFrameIndex, {
@@ -1109,15 +1177,63 @@ function handlePointerUp() {
     }
   }
 
+  const swapSourceIndex = activeFrameIndex;
+  const swapTargetIndex = dragSwapTargetIndex;
+  const shouldSwapFrames = (
+    swapSourceIndex !== null &&
+    swapTargetIndex !== null &&
+    swapTargetIndex !== swapSourceIndex &&
+    swapSourceIndex >= 0 &&
+    swapTargetIndex >= 0 &&
+    swapSourceIndex < collageImages.length &&
+    swapTargetIndex < collageImages.length
+  );
+
+  if (shouldSwapFrames) {
+    ensureCollageFrameTransforms();
+
+    [collageImages[swapSourceIndex], collageImages[swapTargetIndex]] = [
+      collageImages[swapTargetIndex],
+      collageImages[swapSourceIndex]
+    ];
+    [collageFrameTransforms[swapSourceIndex], collageFrameTransforms[swapTargetIndex]] = [
+      collageFrameTransforms[swapTargetIndex],
+      collageFrameTransforms[swapSourceIndex]
+    ];
+
+    selectedCollageImageIndex = swapTargetIndex;
+    activeFrameIndex = null;
+    initialFrameTransform = null;
+    pinchFrameIndex = null;
+    dragSwapTargetIndex = null;
+    activeDragStampId = null;
+    cropAction = null;
+    initialCropRect = null;
+    setPanningState(false);
+    delete dragStartPos.offsetX;
+    delete dragStartPos.offsetY;
+
+    rebuildCollageSource();
+    requestRender();
+    return;
+  }
+
+  const hadDragSwapTarget = dragSwapTargetIndex !== null;
+
   cropAction = null;
   initialCropRect = null;
   activeDragStampId = null;
   activeFrameIndex = null;
   initialFrameTransform = null;
   pinchFrameIndex = null;
+  dragSwapTargetIndex = null;
   setPanningState(false);
   delete dragStartPos.offsetX;
   delete dragStartPos.offsetY;
+
+  if (hadDragSwapTarget) {
+    requestRender();
+  }
 }
 
 function cancelCrop() {
@@ -1644,6 +1760,11 @@ clearBtn.addEventListener('click', () => {
   imgLoaded = false;
   cropMode = false;
   cropRect = null;
+  activeFrameIndex = null;
+  initialFrameTransform = null;
+  pinchFrameIndex = null;
+  dragSwapTargetIndex = null;
+  setPanningState(false);
   resetViewport();
 
   stamps = [createStamp({ location: '', dateTime: getCurrentIsoDateTime() })];
