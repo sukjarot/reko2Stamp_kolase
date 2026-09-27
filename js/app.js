@@ -642,12 +642,31 @@ function renderStampOptions() {
 }
 
 function syncAlignButtons(stamp) {
-  const activeAlign = stamp ? getStampTextAlign(stamp) : null;
+  const activePosition = stamp ? (stamp.positionPreset || 'bottom-left') : null;
   alignButtons.forEach((button) => {
-    const isActive = button.dataset.align === activeAlign;
+    const isActive = button.dataset.position === activePosition;
     button.classList.toggle('is-active', isActive);
     button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   });
+}
+
+function moveStampToPreset(stamp, preset) {
+  if (!stamp || !preset || !canvas.width || !canvas.height) return;
+
+  const [vertical, horizontal] = preset.split('-');
+  const padding = Math.max(18, stamp.size * 0.45);
+  const lineCount = Math.max(1, buildStampText(stamp).split('\n').length);
+  const lineHeight = stamp.size * 1.25;
+
+  stamp.textAlign = horizontal === 'center' ? 'center' : (horizontal === 'right' ? 'right' : 'left');
+  stamp.x = horizontal === 'center' ? canvas.width / 2 : (horizontal === 'right' ? canvas.width - padding : padding);
+  stamp.y = vertical === 'top'
+    ? padding + stamp.size
+    : (vertical === 'middle'
+      ? (canvas.height / 2) - ((lineCount - 1) * lineHeight / 2)
+      : canvas.height - padding - ((lineCount - 1) * lineHeight));
+  stamp.positionPreset = preset;
+  constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
 }
 
 function syncControlsFromStamp(stamp) {
@@ -1698,8 +1717,7 @@ alignButtons.forEach((button) => {
     const stamp = getSelectedStamp();
     if (!stamp) return;
 
-    stamp.textAlign = button.dataset.align || 'left';
-    constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
+    moveStampToPreset(stamp, button.dataset.position || 'bottom-left');
     syncAlignButtons(stamp);
     requestRender();
   });

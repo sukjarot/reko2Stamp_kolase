@@ -1049,3 +1049,283 @@ canvas {
     font-size: 11px;
   }
 }
+
+/* =========================================================
+   BOTTOM PANEL REFACTOR
+   The active markup is .app-layout; the previous sidebar markup is
+   preserved in an inert template in index.html for safe rollback.
+   ========================================================= */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 50px);
+  min-height: 0;
+}
+
+.app-layout .canvas-wrap {
+  order: 1;
+  flex: 1 1 auto;
+  min-height: 220px;
+  width: 100%;
+  background-color: #202b3e;
+}
+
+.canvas-wrap::after {
+  content: "Mulai dengan memilih foto\A atau jatuhkan foto di sini";
+  inset: 24px;
+  border: 1px dashed rgba(226, 232, 240, 0.38);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(30, 41, 59, 0.38));
+  backdrop-filter: blur(8px);
+  color: #dbeafe;
+  font-size: clamp(0.9rem, 1.6vw, 1.05rem);
+  line-height: 1.65;
+  text-align: center;
+  white-space: pre-line;
+  opacity: 0;
+}
+
+.canvas-wrap:has(canvas[width="300"][height="300"])::after,
+.canvas-wrap.is-drag-over::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.app-layout .controls {
+  order: 2;
+  width: 100%;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px clamp(14px, 2.4vw, 32px) 16px;
+  overflow: visible;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px 22px 0 0;
+  background: rgba(60, 72, 92, 0.65);
+  box-shadow: 0 -16px 42px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.controls-mobile-header { display: none; }
+
+.control-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(30, 41, 59, 0.43);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 26px rgba(2, 6, 23, 0.15);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.control-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #f8fafc;
+  font: 700 0.78rem/1.2 'Montserrat', sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.card-status {
+  color: #bfdbfe;
+  font: 600 0.68rem/1 Inter, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.control-card label { margin-bottom: 2px; }
+.control-card input[type="text"],
+.control-card input[type="datetime-local"],
+.control-card select,
+.control-card textarea {
+  padding: 9px 10px;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.control-card textarea { min-height: 48px; resize: none; }
+.control-card .input-group-row { margin: 0; gap: 7px; }
+.control-card .file-btn,
+.control-card .btn-camera { min-height: 38px; padding: 9px 5px; font-size: 0.75rem; }
+.control-card .main-btn { padding: 9px 7px; font-size: 0.76rem; }
+.compact-action { margin-top: auto; }
+
+.collage-slot-list { gap: 4px; }
+.collage-slot-row { padding: 5px 6px; }
+.collage-slot-delete { padding: 5px 7px; }
+.panel-note { padding: 6px; }
+
+.quick-action-grid { margin-top: auto; gap: 6px; }
+.quick-action-grid .main-btn { padding: 9px 3px; }
+
+.data-input-grid,
+.font-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.font-grid { grid-template-columns: minmax(0, 1fr) 54px; }
+.font-grid input[type="color"] { width: 100%; height: 37px; padding: 2px; border-radius: 10px; }
+
+.input-with-icon { position: relative; }
+.input-with-icon > span {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  z-index: 1;
+  color: #93c5fd;
+  font-size: 0.95rem;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.input-with-icon input { padding-left: 30px !important; }
+.location-input > span { top: 17px; transform: none; }
+.location-input textarea { padding-left: 30px !important; }
+
+.date-toggle {
+  min-width: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.date-toggle label:first-child { max-width: 75px; text-align: center; font-size: 0.64rem; }
+.date-toggle .switch { margin: 0; }
+
+.location-btn-group { gap: 6px; margin-top: 0; }
+.location-btn-group .gps-btn,
+.location-btn-group .map-btn-style { padding: 8px 4px; font-size: 0.68rem; }
+
+.stamp-align-card {
+  margin-top: auto;
+  padding: 8px;
+  gap: 7px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.36);
+}
+.stamp-align-grid { gap: 4px; }
+.stamp-align-btn { min-height: 27px; padding: 3px; border-radius: 7px; font-size: 0.9rem; }
+.stamp-align-btn.is-active { background: rgba(59, 130, 246, 0.52); border-color: rgba(191, 219, 254, 0.85); }
+.stamp-align-header { font-size: 0.62rem; }
+.stamp-align-badge { padding: 3px 6px; font-size: 0.58rem; }
+
+.text-card .slider-container { padding: 8px; background: rgba(15, 23, 42, 0.42); }
+.text-card .slider-header { margin-bottom: 3px; font-size: 0.72rem; }
+.text-card .stamp-manager { gap: 6px; }
+.stamp-actions { gap: 6px; }
+.desktop-panel-actions { display: grid; gap: 6px; margin-top: auto; }
+.desktop-panel-actions #storageInfo { color: var(--text-muted); font-size: 0.7rem; text-align: center; }
+
+/* Desktop workspace: preserve a generous canvas while keeping controls readable. */
+@media (min-width: 769px) {
+  .app-layout {
+    flex-direction: row;
+  }
+
+  .app-layout .canvas-wrap {
+    order: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .app-layout .canvas-wrap canvas {
+    max-width: calc(100% - 32px);
+    max-height: calc(100% - 32px);
+  }
+
+  .app-layout .controls {
+    order: 2;
+    width: clamp(380px, 28vw, 470px);
+    flex: 0 0 clamp(380px, 28vw, 470px);
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: 12px;
+    padding: 16px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-radius: 22px 0 0 22px;
+    border-right: 0;
+    border-bottom: 0;
+    box-shadow: -16px 0 42px rgba(2, 6, 23, 0.28), inset 1px 0 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .control-card {
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .control-card-title { font-size: 0.86rem; }
+  .control-card label { font-size: 0.74rem; }
+  .control-card .file-btn,
+  .control-card .btn-camera { min-height: 42px; padding: 10px 7px; font-size: 0.82rem; }
+  .control-card .main-btn { padding: 10px 8px; font-size: 0.82rem; }
+  .control-card textarea { min-height: 56px; }
+  .control-card input[type="text"],
+  .control-card input[type="datetime-local"],
+  .control-card select,
+  .control-card textarea { padding: 10px 11px; font-size: 0.84rem; }
+  .stamp-align-btn { min-height: 34px; font-size: 1rem; }
+  .text-card .slider-container { padding: 10px; }
+}
+
+@media (max-height: 820px) and (min-width: 769px) {
+  .app-layout .controls { padding-top: 9px; padding-bottom: 10px; gap: 9px; }
+  .control-card { gap: 5px; padding: 9px; }
+  .control-card .main-btn { padding: 7px 5px; }
+  .control-card .file-btn, .control-card .btn-camera { min-height: 33px; padding: 7px 4px; }
+  .control-card textarea { min-height: 38px; }
+  .stamp-align-btn { min-height: 21px; }
+  .stamp-align-card { padding: 6px; }
+  .text-card .slider-container { padding: 6px; }
+}
+
+@media (max-width: 768px) {
+  body { overflow: hidden; }
+  body > header { display: none; }
+  .app-layout { height: 100vh; }
+  .app-layout .canvas-wrap { min-height: 0; flex: 1 1 46vh; }
+  .app-layout .controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    flex: 0 1 54vh;
+    max-height: 54vh;
+    gap: 10px;
+    padding: 0 12px calc(18px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-snap-type: y proximity;
+    border-radius: 24px 24px 0 0;
+  }
+  .controls-mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 -12px;
+    padding: 9px 14px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(60, 72, 92, 0.92);
+    backdrop-filter: blur(16px);
+  }
+  .controls-mobile-header > div { display: grid; justify-items: start; gap: 5px; }
+  .controls-mobile-header strong { font: 700 0.9rem 'Montserrat', sans-serif; }
+  .sheet-handle { display: block; width: 34px; height: 3px; border-radius: 999px; background: rgba(255,255,255,0.36); }
+  .controls-mobile-header .main-btn { padding: 8px 13px; font-size: 0.76rem; }
+  .control-card { scroll-snap-align: start; padding: 12px; }
+  .data-input-grid { grid-template-columns: minmax(0, 1fr) 82px; }
+  .stamp-align-btn { min-height: 33px; }
+}

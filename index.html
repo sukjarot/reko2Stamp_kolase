@@ -41,7 +41,7 @@
 <body>
   <header>Reko2stamp.kolase</header>
 
-  <main>
+  <template id="legacy-sidebar-layout">
     <!-- CONTROL PANEL -->
     <aside class="controls">
       <!-- FILE INPUT BUTTONS -->
@@ -197,6 +197,55 @@
     <section class="canvas-wrap" id="canvasContainer">
       <canvas id="canvas"></canvas>
     </section>
+  </template>
+
+  <main class="app-layout">
+    <section class="canvas-wrap" id="canvasContainer" aria-label="Area pratinjau foto">
+      <canvas id="canvas"></canvas>
+    </section>
+
+    <aside class="controls" aria-label="Panel kontrol editor">
+      <div class="controls-mobile-header">
+        <div><span class="sheet-handle" aria-hidden="true"></span><strong>Editor</strong></div>
+        <button id="downloadFinal" class="main-btn btn-primary" type="button">Simpan</button>
+      </div>
+
+      <div class="control-card media-card">
+        <div class="control-card-title"><span>Media Input</span><span id="collageInfo" class="card-status">0/3 foto</span></div>
+        <div class="input-group-row input-group-row-three">
+          <label class="file-btn">Galeri<input type="file" id="fileInput" accept="image/*" multiple hidden></label>
+          <label class="file-btn">Tambah<input type="file" id="addPhotoInput" accept="image/*" multiple hidden></label>
+          <button id="openCameraBtn" class="btn-camera" type="button">Kamera</button>
+        </div>
+        <div id="collageSlotList" class="collage-slot-list" aria-live="polite"></div>
+        <button id="clearBtn" class="main-btn btn-danger compact-action" type="button">Hapus Foto</button>
+      </div>
+
+      <div class="control-card layout-card">
+        <div class="control-card-title">Layout &amp; Edit</div>
+        <label for="layoutSelect">Layout Kolase</label>
+        <select id="layoutSelect"><option value="auto">Auto</option><option value="vertical">2 Foto: Atas-Bawah</option><option value="horizontal">2 Foto: Kiri-Kanan</option><option value="top1_bottom2">3 Foto: 1 Atas, 2 Bawah</option><option value="top2_bottom1">3 Foto: 2 Atas, 1 Bawah</option><option value="left_big_right2">3 Foto: Kiri Besar, Kanan 2 Kecil</option></select>
+        <div class="action-grid quick-action-grid"><button id="resetView" class="main-btn btn-secondary" type="button">Reset</button><button id="rotateBtn" class="main-btn btn-secondary" type="button">Putar</button><button id="toggleCrop" class="main-btn btn-secondary" type="button">Potong</button></div>
+      </div>
+
+      <div class="control-card data-card">
+        <div class="control-card-title">Cap &amp; Data</div>
+        <div class="data-input-grid"><div><label for="dtInput">Waktu</label><div class="input-with-icon"><span aria-hidden="true">◷</span><input type="datetime-local" id="dtInput"></div></div><div class="date-toggle"><label for="showDateToggle">Tampilkan waktu</label><label class="switch"><input type="checkbox" id="showDateToggle" checked><span class="slider"></span></label></div></div>
+        <label for="locInput">Lokasi / Catatan</label>
+        <div class="location-wrapper input-with-icon location-input"><span aria-hidden="true">⌖</span><textarea id="locInput" rows="2" placeholder="Ketik lokasi atau gunakan GPS..."></textarea><div id="suggestions" class="suggestions-list"></div></div>
+        <div class="location-btn-group"><button id="gpsBtn" class="gps-btn" type="button">GPS</button><button id="gpsFollowBtn" class="gps-btn" type="button">Ikuti GPS: OFF</button><button id="mapBtn" class="map-btn-style" type="button">Peta</button></div>
+        <div class="stamp-align-card"><div class="stamp-align-header"><span>Posisi Cap</span><span class="stamp-align-badge">Presisi 3×3</span></div><div id="stampAlignControls" class="stamp-align-grid" role="group" aria-label="Atur posisi cap"><button type="button" class="stamp-align-btn" data-position="top-left" aria-label="Kiri atas">↖</button><button type="button" class="stamp-align-btn" data-position="top-center" aria-label="Tengah atas">↑</button><button type="button" class="stamp-align-btn" data-position="top-right" aria-label="Kanan atas">↗</button><button type="button" class="stamp-align-btn" data-position="middle-left" aria-label="Kiri tengah">←</button><button type="button" class="stamp-align-btn" data-position="middle-center" aria-label="Tengah">•</button><button type="button" class="stamp-align-btn" data-position="middle-right" aria-label="Kanan tengah">→</button><button type="button" class="stamp-align-btn is-active" data-position="bottom-left" aria-label="Kiri bawah" aria-pressed="true">↙</button><button type="button" class="stamp-align-btn" data-position="bottom-center" aria-label="Tengah bawah">↓</button><button type="button" class="stamp-align-btn" data-position="bottom-right" aria-label="Kanan bawah">↘</button></div></div>
+      </div>
+
+      <div class="control-card text-card">
+        <div class="control-card-title">Gaya Teks</div>
+        <label for="stampSelect">Stamp Layer</label><div class="stamp-manager"><select id="stampSelect"></select><div class="action-grid stamp-actions"><button id="addStampBtn" class="main-btn btn-secondary" type="button">+ Tambah</button><button id="deleteStampBtn" class="main-btn btn-danger" type="button">Hapus</button></div></div>
+        <div class="font-grid"><div><label for="fontSelect">Font</label><select id="fontSelect"><option value="Arial">Arial</option><option value="Roboto">Roboto</option><option value="Montserrat">Montserrat</option><option value="MiSans">MiSans</option></select></div><div><label for="fontColor">Warna</label><input type="color" id="fontColor" value="#ffffff"></div></div>
+        <div class="slider-container"><div class="slider-header"><span>Ukuran</span><span id="sizeVal">80px</span></div><div class="slider-group"><button class="btn-adjust" onclick="adjustSize(-5)" type="button">−</button><input type="range" id="sizeSlider" min="20" max="300" value="80" step="5"><button class="btn-adjust" onclick="adjustSize(5)" type="button">+</button></div></div>
+        <div class="slider-container"><div class="slider-header"><span>Opacity</span><span id="opacityVal">90%</span></div><div class="slider-group"><input type="range" id="opacitySlider" min="0" max="100" step="5" value="90"></div></div>
+        <div class="desktop-panel-actions"><button id="storageBtn" class="main-btn btn-secondary" type="button">Setup Folder &amp; Nama File</button><button id="installBtn" class="main-btn btn-primary" type="button" style="display:none">Pasang Aplikasi</button><div id="storageInfo" style="display:none">Folder Aktif: <span id="activeFolderLabel">-</span></div></div>
+      </div>
+    </aside>
   </main>
 
   <div id="imageImportPrompt" class="image-import-prompt" hidden>
