@@ -3,14 +3,14 @@
    ============================ */
 
 :root {
-  --bg-app: #1e293b;       
-  --bg-panel: #3c485c;     
-  --bg-input: #4b5462;     
-  --primary: #3b82f6;
-  --danger: #ef4444;       
-  --success: #10b981;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
+  --bg-app: #f1f5f9;       /* Lebih cerah (Slate terang) */
+  --bg-panel: #ffffff;     /* Panel putih bersih */
+  --bg-input: #f8fafc;     /* Kolom input abu-abu sangat muda */
+  --primary: #2563eb;      /* Biru yang sedikit lebih kontras untuk background terang */
+  --danger: #dc2626;       
+  --success: #16a34a;
+  --text-main: #0f172a;    /* Tulisan utama jadi gelap (Slate tua) agar terbaca */
+  --text-muted: #64748b;   /* Tulisan sekunder abu-abu sedang */
   --radius: 12px;
 }
 
@@ -1151,7 +1151,7 @@ canvas {
   background: rgba(15, 23, 42, 0.5);
 }
 
-.control-card textarea { min-height: 48px; resize: none; }
+.control-card textarea { min-height: 48px; resize: vertical; }
 .control-card .input-group-row { margin: 0; gap: 7px; }
 .control-card .file-btn,
 .control-card .btn-camera { min-height: 38px; padding: 9px 5px; font-size: 0.75rem; }
@@ -1283,8 +1283,7 @@ canvas {
   .control-card .file-btn,
   .control-card .btn-camera { min-height: 42px; padding: 10px 7px; font-size: 0.82rem; }
   .control-card .main-btn { padding: 10px 8px; font-size: 0.82rem; }
-  .control-card textarea { min-height: 56px; }
-  .control-card input[type="text"],
+  .control-card textarea { min-height: 56px; resize: vertical; }  .control-card input[type="text"],
   .control-card input[type="datetime-local"],
   .control-card select,
   .control-card textarea { padding: 10px 11px; font-size: 0.84rem; }
@@ -1297,7 +1296,7 @@ canvas {
   .control-card { gap: 5px; padding: 9px; }
   .control-card .main-btn { padding: 7px 5px; }
   .control-card .file-btn, .control-card .btn-camera { min-height: 33px; padding: 7px 4px; }
-  .control-card textarea { min-height: 38px; }
+  .control-card textarea { min-height: 38px; resize: vertical; }
   .stamp-align-btn { min-height: 21px; }
   .stamp-align-card { padding: 6px; }
   .text-card .slider-container { padding: 6px; }
