@@ -3,14 +3,17 @@
    ============================ */
 
 :root {
-  --bg-app: #f1f5f9;       /* Lebih cerah (Slate terang) */
-  --bg-panel: #ffffff;     /* Panel putih bersih */
-  --bg-input: #f8fafc;     /* Kolom input abu-abu sangat muda */
-  --primary: #2563eb;      /* Biru yang sedikit lebih kontras untuk background terang */
-  --danger: #dc2626;       
-  --success: #16a34a;
-  --text-main: #0f172a;    /* Tulisan utama jadi gelap (Slate tua) agar terbaca */
-  --text-muted: #64748b;   /* Tulisan sekunder abu-abu sedang */
+  --bg-app: #1A1C1A;
+  --bg-panel: #2A2D2A;
+  --bg-input: #202320;
+  --primary: #798A5F;
+  --primary-hover: #9CB083;
+  --wood: #967451;
+  --wood-soft: rgba(150, 116, 81, 0.34);
+  --danger: #9A625A;
+  --success: #9CB083;
+  --text-main: #E6E8E6;
+  --text-muted: #A0A5A0;
   --radius: 12px;
 }
 
@@ -1040,6 +1043,226 @@ canvas {
   }
 }
 
+/* =========================================================
+   JAPANDI ZEN THEME
+   Sumi-iro canvas, restrained matcha interaction states, and
+   Keyaki wood lines create a quiet, high-contrast workspace.
+   ========================================================= */
+:root {
+  --bg-app: #1A1C1A;
+  --bg-panel: #2A2D2A;
+  --bg-input: #202320;
+  --primary: #798A5F;
+  --primary-hover: #9CB083;
+  --wood: #967451;
+  --wood-soft: rgba(150, 116, 81, 0.34);
+  --danger: #9A625A;
+  --success: #9CB083;
+  --text-main: #E6E8E6;
+  --text-muted: #A0A5A0;
+  --radius: 12px;
+}
+
+body {
+  background: var(--bg-app);
+  color: var(--text-main);
+}
+
+header {
+  background: linear-gradient(90deg, #2A2D2A, #332D27 55%, #2A2D2A);
+  border-bottom-color: var(--wood-soft);
+  color: var(--text-main);
+  letter-spacing: 0.045em;
+  text-shadow: none;
+  box-shadow: 0 1px 0 rgba(230, 232, 230, 0.04), 0 8px 28px rgba(0, 0, 0, 0.22);
+}
+
+.app-layout .canvas-wrap,
+.canvas-wrap {
+  background-color: #1A1C1A;
+  background-image: radial-gradient(rgba(150, 116, 81, 0.32) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.app-layout .canvas-wrap {
+  background: radial-gradient(circle at 50% 0%, rgba(121, 138, 95, 0.12), transparent 37%),
+    radial-gradient(rgba(150, 116, 81, 0.25) 1px, transparent 1px), #1A1C1A;
+  background-size: auto, 24px 24px, auto;
+}
+
+.canvas-wrap::after {
+  border-color: var(--wood-soft);
+  background: rgba(42, 45, 42, 0.76);
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+}
+
+.app-layout .controls,
+.controls {
+  border-color: var(--wood-soft);
+  background: rgba(42, 45, 42, 0.94);
+  box-shadow: -16px 0 42px rgba(0, 0, 0, 0.28), inset 1px 0 rgba(230, 232, 230, 0.04);
+}
+
+.control-card {
+  border-color: rgba(150, 116, 81, 0.30);
+  background: linear-gradient(145deg, rgba(48, 51, 48, 0.96), rgba(37, 40, 37, 0.96));
+  box-shadow: inset 0 1px 0 rgba(230, 232, 230, 0.035), 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.control-card-title {
+  color: var(--text-main);
+  letter-spacing: 0.09em;
+}
+
+.card-status,
+.input-with-icon > span {
+  color: var(--primary-hover);
+}
+
+label,
+.slider-header,
+.stamp-align-header {
+  color: var(--text-muted);
+}
+
+input[type="text"],
+input[type="datetime-local"],
+input[type="number"],
+select,
+textarea,
+.control-card input[type="text"],
+.control-card input[type="datetime-local"],
+.control-card select,
+.control-card textarea {
+  border-color: rgba(150, 116, 81, 0.52);
+  background: var(--bg-input);
+  color: var(--text-main);
+}
+
+input::placeholder,
+textarea::placeholder { color: #858B85; }
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary-hover);
+  box-shadow: 0 0 0 3px rgba(121, 138, 95, 0.18);
+  outline: none;
+}
+
+.btn-primary,
+.file-btn,
+.btn-camera {
+  background: var(--primary);
+  color: #F5F6F2;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.file-btn,
+.btn-camera { background: var(--primary); }
+.btn-primary:hover,
+.file-btn:hover,
+.btn-camera:hover { background: var(--primary-hover); }
+
+.btn-secondary,
+.gps-btn,
+.map-btn-style,
+.btn-adjust {
+  border: 1px solid var(--wood-soft);
+  background: #353834;
+  color: var(--text-main);
+  box-shadow: none;
+}
+
+.gps-btn:hover,
+.map-btn-style:hover,
+.btn-secondary:hover { background: #41463E; }
+.btn-danger { background: #714B45; color: #F5F1EF; }
+.btn-danger:hover { background: var(--danger); }
+
+button:focus-visible,
+.file-btn:focus-visible,
+.gps-btn:focus-visible,
+.map-btn-style:focus-visible {
+  outline-color: var(--primary-hover);
+}
+
+.stamp-align-card,
+.text-card .slider-container {
+  border-color: var(--wood-soft);
+  background: rgba(26, 28, 26, 0.58);
+}
+
+.stamp-align-badge {
+  background: rgba(150, 116, 81, 0.18);
+  color: #CDA77B;
+  border-color: rgba(150, 116, 81, 0.46);
+}
+
+.stamp-align-btn {
+  border-color: rgba(150, 116, 81, 0.35);
+  background: #292C29;
+  color: var(--text-muted);
+}
+
+.stamp-align-btn.is-active {
+  background: var(--primary);
+  border-color: var(--primary-hover);
+  color: #F5F6F2;
+}
+
+input[type=range] { background: #43473F; }
+input[type=range]::-webkit-slider-thumb { background: var(--primary-hover); border-color: #E6E8E6; }
+input[type=range]::-moz-range-thumb { background: var(--primary-hover); border-color: #E6E8E6; }
+
+.toast-notification,
+.image-import-card {
+  border-color: var(--wood-soft);
+  background: rgba(42, 45, 42, 0.98);
+  color: var(--text-main);
+}
+
+.image-import-card strong { color: var(--text-main); }
+.toast-notification.info { border-color: var(--primary); }
+.toast-notification.success { border-color: var(--primary-hover); }
+.toast-notification.error { border-color: var(--danger); }
+
+.controls::-webkit-scrollbar-track { background: rgba(150, 116, 81, 0.10); }
+.controls::-webkit-scrollbar-thumb { background: rgba(150, 116, 81, 0.48); }
+.controls::-webkit-scrollbar-thumb:hover { background: var(--wood); }
+
+#mapModal,
+#storageModal { background: #1A1C1A !important; }
+#mapModal > div > div:first-child,
+#mapModal > div > div:last-child { background: #2A2D2A; border-color: var(--wood-soft); }
+#mapModal > div > div:first-child span,
+#storageModal h3,
+#filenamePreview { color: var(--text-main); }
+#mapModal > div > div:last-child,
+#dirStatus,
+#storageInfo { color: var(--text-muted); }
+#storageModal h3 { border-color: var(--wood-soft); }
+#pickDirBtn { background: var(--wood) !important; }
+#storageModal > div > div[style*="background"] { background: #202320 !important; border-color: var(--wood-soft) !important; }
+#storageModal > div > div[style*="background"] label { color: var(--primary-hover) !important; }
+
+@media (min-width: 769px) {
+  .app-layout .canvas-wrap {
+    background: radial-gradient(circle at 50% 0%, rgba(121, 138, 95, 0.12), transparent 36%),
+      radial-gradient(rgba(150, 116, 81, 0.25) 1px, transparent 1px), #1A1C1A;
+    background-size: auto, 24px 24px, auto;
+  }
+
+  .app-layout .controls { background: rgba(42, 45, 42, 0.95); }
+  .control-card { background: linear-gradient(145deg, #303330, #252825); }
+}
+
+@media (max-width: 768px) {
+  .app-layout .controls,
+  .controls-mobile-header { background: rgba(42, 45, 42, 0.97); border-color: var(--wood-soft); }
+  .sheet-handle { background: var(--wood); }
+}
+
 @media (max-width: 420px) {
   .stamp-align-badge {
     font-size: 10px;
@@ -1344,4 +1567,87 @@ canvas {
   .control-card { scroll-snap-align: start; padding: 12px; }
   .data-input-grid { grid-template-columns: minmax(0, 1fr) 82px; }
   .stamp-align-btn { min-height: 33px; }
+}
+
+/* Keep the Japandi layer last: the responsive workspace rules above define
+   geometry, while these declarations own its visual treatment. */
+.app-layout .canvas-wrap {
+  background: radial-gradient(circle at 50% 0%, rgba(121, 138, 95, 0.12), transparent 37%),
+    radial-gradient(rgba(150, 116, 81, 0.25) 1px, transparent 1px), #1A1C1A;
+  background-size: auto, 24px 24px, auto;
+}
+
+.app-layout .controls {
+  border-color: var(--wood-soft);
+  background: rgba(42, 45, 42, 0.95);
+  box-shadow: -18px 0 42px rgba(0, 0, 0, 0.28), inset 1px 0 rgba(230, 232, 230, 0.04);
+}
+
+.control-card {
+  border-color: rgba(150, 116, 81, 0.30);
+  background: linear-gradient(145deg, #303330, #252825);
+  box-shadow: inset 0 1px 0 rgba(230, 232, 230, 0.035), 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.control-card-title { color: var(--text-main); }
+.card-status,
+.input-with-icon > span { color: var(--primary-hover); }
+
+.control-card input[type="text"],
+.control-card input[type="datetime-local"],
+.control-card select,
+.control-card textarea {
+  border-color: rgba(150, 116, 81, 0.52);
+  background: var(--bg-input);
+  color: var(--text-main);
+}
+
+.stamp-align-card,
+.text-card .slider-container {
+  border-color: var(--wood-soft);
+  background: rgba(26, 28, 26, 0.58);
+}
+
+.stamp-align-btn.is-active {
+  background: var(--primary);
+  border-color: var(--primary-hover);
+  color: #F5F6F2;
+}
+
+.stamp-align-btn:hover {
+  border-color: var(--wood);
+  background: #3A3E38;
+}
+
+.canvas-wrap.is-drag-over { box-shadow: inset 0 0 0 2px var(--primary-hover); }
+
+.suggestions-list {
+  border-color: var(--wood-soft);
+  background: #2A2D2A;
+}
+
+.suggestion-item { border-color: var(--wood-soft); color: var(--text-main); }
+.suggestion-item:hover { background: var(--primary); color: #F5F6F2; }
+
+.collage-slot-row {
+  border-color: rgba(150, 116, 81, 0.28);
+  background: rgba(26, 28, 26, 0.54);
+}
+
+.collage-slot-row.is-active {
+  border-color: var(--primary-hover);
+  box-shadow: inset 0 0 0 1px rgba(121, 138, 95, 0.28);
+}
+
+.collage-slot-delete { background: rgba(154, 98, 90, 0.22); color: #E7CBC7; }
+.collage-slot-delete:hover { background: rgba(154, 98, 90, 0.42); }
+.slider { background-color: #5A5E58; }
+.slider:before { background-color: var(--text-main); }
+
+@media (max-width: 768px) {
+  .app-layout .controls,
+  .controls-mobile-header {
+    background: rgba(42, 45, 42, 0.97);
+    border-color: var(--wood-soft);
+  }
 }
