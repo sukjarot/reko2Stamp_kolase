@@ -833,11 +833,7 @@ canvas {
   margin-bottom: 16px;
 }
 
-/* [ADDED] Supports Gallery, Add Photo, and Camera in the existing upload row. */
-.input-group-row-three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
+/* The media row uses the standard two-action grid. */
 /* CAMERA MODAL */
 .camera-modal {
   position: fixed; 
@@ -1297,7 +1293,7 @@ input[type=range]::-moz-range-thumb { background: var(--primary-hover); border-c
 }
 
 .canvas-wrap::after {
-  content: "Mulai dengan memilih foto\A atau jatuhkan foto di sini";
+  content: "Klik atau ketuk kanvas untuk menambah foto\A atau jatuhkan foto di sini";
   inset: 24px;
   border: 1px dashed rgba(226, 232, 240, 0.38);
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(30, 41, 59, 0.38));

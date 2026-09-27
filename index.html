@@ -45,14 +45,9 @@
     <!-- CONTROL PANEL -->
     <aside class="controls">
       <!-- FILE INPUT BUTTONS -->
-      <!-- [UPDATED] Gallery keeps replace behavior; Add Photo appends to current collage. -->
-      <div class="input-group-row input-group-row-three">
+      <div class="input-group-row">
         <label class="file-btn" style="margin:0; display:flex; align-items:center; justify-content:center; gap:5px;">
-          📂 Galeri
-          <input type="file" id="fileInput" accept="image/*" multiple style="display: none;"/>
-        </label>
-        <label class="file-btn" style="margin:0; display:flex; align-items:center; justify-content:center; gap:5px;">
-          Add Photo
+          Tambah
           <input type="file" id="addPhotoInput" accept="image/*" multiple style="display: none;"/>
         </label>
         <button id="openCameraBtn" class="btn-camera">📷 Foto</button>
@@ -200,7 +195,7 @@
   </template>
 
   <main class="app-layout">
-    <section class="canvas-wrap" id="canvasContainer" aria-label="Area pratinjau foto">
+    <section class="canvas-wrap" id="canvasContainer" aria-label="Area pratinjau foto. Klik atau ketuk untuk menambahkan foto.">
       <canvas id="canvas"></canvas>
     </section>
 
@@ -212,8 +207,7 @@
 
       <div class="control-card media-card">
         <div class="control-card-title"><span>Media Input</span><span id="collageInfo" class="card-status">0/3 foto</span></div>
-        <div class="input-group-row input-group-row-three">
-          <label class="file-btn">Galeri<input type="file" id="fileInput" accept="image/*" multiple hidden></label>
+        <div class="input-group-row">
           <label class="file-btn">Tambah<input type="file" id="addPhotoInput" accept="image/*" multiple hidden></label>
           <button id="openCameraBtn" class="btn-camera" type="button">Kamera</button>
         </div>

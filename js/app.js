@@ -97,8 +97,9 @@ let isPanning = false;
 let panStartX = 0;
 let panStartY = 0;
 let canvasDragDepth = 0;
+let canvasTapStart = null;
+let canvasGestureMoved = false;
 
-const fileInput = document.getElementById('fileInput');
 const addPhotoInput = document.getElementById('addPhotoInput');
 const layoutSelect = document.getElementById('layoutSelect');
 const dtInput = document.getElementById('dtInput');
@@ -1290,6 +1291,22 @@ function isDesktopFileDropAvailable() {
   return window.matchMedia('(hover: hover) and (pointer: fine)').matches || window.innerWidth > 768;
 }
 
+function openAddPhotoPicker() {
+  if (addPhotoInput) addPhotoInput.click();
+}
+
+function startCanvasTap(clientX, clientY) {
+  canvasTapStart = { x: clientX, y: clientY };
+  canvasGestureMoved = false;
+}
+
+function trackCanvasGesture(clientX, clientY) {
+  if (!canvasTapStart) return;
+
+  const distance = Math.hypot(clientX - canvasTapStart.x, clientY - canvasTapStart.y);
+  if (distance > 10) canvasGestureMoved = true;
+}
+
 function getImageFilesFromDataTransfer(dataTransfer) {
   return Array.from(dataTransfer && dataTransfer.files ? dataTransfer.files : [])
     .filter((file) => file.type.startsWith('image/'));
@@ -1410,6 +1427,12 @@ async function importCapturedImageWithChoice(imageSource) {
 }
 
 canvasContainer.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    startCanvasTap(e.touches[0].clientX, e.touches[0].clientY);
+  } else {
+    canvasGestureMoved = true;
+  }
+
   if (!imgLoaded) return;
 
   if (e.touches.length === 2) {
@@ -1430,6 +1453,12 @@ canvasContainer.addEventListener('touchstart', (e) => {
 }, { passive: false });
 
 canvasContainer.addEventListener('touchmove', (e) => {
+  if (e.touches.length !== 1) {
+    canvasGestureMoved = true;
+  } else {
+    trackCanvasGesture(e.touches[0].clientX, e.touches[0].clientY);
+  }
+
   if (!imgLoaded) return;
   e.preventDefault();
 
@@ -1456,7 +1485,9 @@ canvasContainer.addEventListener('touchmove', (e) => {
   }
 }, { passive: false });
 
-canvasContainer.addEventListener('touchend', handlePointerUp);
+canvasContainer.addEventListener('touchend', () => {
+  if (imgLoaded) handlePointerUp();
+});
 
 document.addEventListener('touchstart', (e) => {
   if (!imgLoaded) return;
@@ -1465,8 +1496,9 @@ document.addEventListener('touchstart', (e) => {
 }, { passive: true });
 
 canvasContainer.addEventListener('mousedown', (e) => {
-  if (!imgLoaded || e.button !== 0) return;
-  handlePointerDown(e.clientX, e.clientY);
+  if (e.button !== 0) return;
+  startCanvasTap(e.clientX, e.clientY);
+  if (imgLoaded) handlePointerDown(e.clientX, e.clientY);
 });
 
 document.addEventListener('mousedown', (e) => {
@@ -1476,6 +1508,7 @@ document.addEventListener('mousedown', (e) => {
 });
 
 window.addEventListener('mousemove', (e) => {
+  if (e.buttons === 1) trackCanvasGesture(e.clientX, e.clientY);
   if (!imgLoaded) return;
   if (e.buttons === 1) {
     handlePointerMove(e.clientX, e.clientY);
@@ -1483,6 +1516,17 @@ window.addEventListener('mousemove', (e) => {
 });
 
 window.addEventListener('mouseup', handlePointerUp);
+
+canvasContainer.addEventListener('click', () => {
+  if (canvasGestureMoved) {
+    canvasTapStart = null;
+    canvasGestureMoved = false;
+    return;
+  }
+
+  canvasTapStart = null;
+  openAddPhotoPicker();
+});
 
 canvasContainer.addEventListener('wheel', (e) => {
   if (!imgLoaded) return;
@@ -1543,18 +1587,7 @@ canvasContainer.addEventListener('drop', async (e) => {
   }
 });
 
-fileInput.addEventListener('change', async (e) => {
-  try {
-    await importImageFilesWithChoice(e.target.files);
-  } catch (err) {
-    console.error('Gagal memuat foto:', err);
-    alert('Foto gagal dimuat. Coba pilih file lain.');
-  } finally {
-    fileInput.value = '';
-  }
-});
-
-// [ADDED] Append-only upload path for the Add Photo button.
+// Tombol Tambah dan klik/ketuk kanvas memakai alur impor yang sama.
 if (addPhotoInput) {
   addPhotoInput.addEventListener('change', async (e) => {
     try {
