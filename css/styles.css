@@ -1224,10 +1224,13 @@ canvas {
 .text-card .stamp-manager { gap: 6px; }
 .stamp-actions { gap: 6px; }
 .desktop-panel-actions { display: grid; gap: 6px; margin-top: auto; }
+.desktop-panel-actions #downloadFinal { display: none; }
 .desktop-panel-actions #storageInfo { color: var(--text-muted); font-size: 0.7rem; text-align: center; }
 
 /* Desktop workspace: preserve a generous canvas while keeping controls readable. */
 @media (min-width: 769px) {
+  .desktop-panel-actions #downloadFinal { display: block; }
+
   .app-layout {
     flex-direction: row;
   }

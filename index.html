@@ -207,7 +207,7 @@
     <aside class="controls" aria-label="Panel kontrol editor">
       <div class="controls-mobile-header">
         <div><span class="sheet-handle" aria-hidden="true"></span><strong>Editor</strong></div>
-        <button id="downloadFinal" class="main-btn btn-primary" type="button">Simpan</button>
+        <button id="downloadFinalMobile" class="main-btn btn-primary" type="button" data-save-photo>Simpan</button>
       </div>
 
       <div class="control-card media-card">
@@ -243,7 +243,7 @@
         <div class="font-grid"><div><label for="fontSelect">Font</label><select id="fontSelect"><option value="Arial">Arial</option><option value="Roboto">Roboto</option><option value="Montserrat">Montserrat</option><option value="MiSans">MiSans</option></select></div><div><label for="fontColor">Warna</label><input type="color" id="fontColor" value="#ffffff"></div></div>
         <div class="slider-container"><div class="slider-header"><span>Ukuran</span><span id="sizeVal">80px</span></div><div class="slider-group"><button class="btn-adjust" onclick="adjustSize(-5)" type="button">−</button><input type="range" id="sizeSlider" min="20" max="300" value="80" step="5"><button class="btn-adjust" onclick="adjustSize(5)" type="button">+</button></div></div>
         <div class="slider-container"><div class="slider-header"><span>Opacity</span><span id="opacityVal">90%</span></div><div class="slider-group"><input type="range" id="opacitySlider" min="0" max="100" step="5" value="90"></div></div>
-        <div class="desktop-panel-actions"><button id="storageBtn" class="main-btn btn-secondary" type="button">Setup Folder &amp; Nama File</button><button id="installBtn" class="main-btn btn-primary" type="button" style="display:none">Pasang Aplikasi</button><div id="storageInfo" style="display:none">Folder Aktif: <span id="activeFolderLabel">-</span></div></div>
+        <div class="desktop-panel-actions"><button id="downloadFinal" class="main-btn btn-primary" type="button" data-save-photo>💾 Simpan Foto</button><button id="storageBtn" class="main-btn btn-secondary" type="button">Setup Folder &amp; Nama File</button><button id="installBtn" class="main-btn btn-primary" type="button" style="display:none">Pasang Aplikasi</button><div id="storageInfo" style="display:none">Folder Aktif: <span id="activeFolderLabel">-</span></div></div>
       </div>
     </aside>
   </main>

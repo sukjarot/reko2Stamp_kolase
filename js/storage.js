@@ -125,13 +125,14 @@ function setupStorageModal(storageBtn, storageModal, pickDirBtn, clearDirBtn, sa
   syncStorageUI(dirStatus, storageInfo, activeFolderLabel, clearDirBtn);
 }
 
-async function savePhoto(canvas, filePrefixInput, fileCounterInput, currentDirHandle, filenamePreview) {
-  const newBtn = document.getElementById('downloadFinal');
+async function savePhoto(canvas, filePrefixInput, fileCounterInput, currentDirHandle, filenamePreview, triggerButton) {
+  const newBtn = triggerButton || document.getElementById('downloadFinal');
 
   if (!newBtn) {
     return alert("Tombol Simpan tidak ditemukan!");
   }
 
+  const originalButtonLabel = newBtn.textContent;
   newBtn.textContent = "\u23F3 Memproses...";
   newBtn.disabled = true;
 
@@ -182,7 +183,7 @@ async function savePhoto(canvas, filePrefixInput, fileCounterInput, currentDirHa
       fallbackDownload(dataURL, finalName);
     }
   } finally {
-    newBtn.textContent = "\uD83D\uDCBE Simpan Foto";
+    newBtn.textContent = originalButtonLabel;
     newBtn.disabled = false;
   }
 }

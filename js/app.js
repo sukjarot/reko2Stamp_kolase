@@ -1794,20 +1794,17 @@ clearBtn.addEventListener('click', () => {
   showToast('Semua foto dihapus.', 'success');
 });
 
-const oldDownloadBtn = document.getElementById('downloadFinal');
-if (oldDownloadBtn) {
-  const newDownloadBtn = oldDownloadBtn.cloneNode(true);
-  oldDownloadBtn.parentNode.replaceChild(newDownloadBtn, oldDownloadBtn);
-
-  newDownloadBtn.addEventListener('click', async () => {
+const downloadButtons = Array.from(document.querySelectorAll('[data-save-photo]'));
+downloadButtons.forEach((downloadButton) => {
+  downloadButton.addEventListener('click', async () => {
     if (!imgLoaded) return alert('Belum ada foto untuk disimpan!');
     clearStampSelection();
     clearCollageSelection();
     renderForExport();
-    await savePhoto(canvas, filePrefixInput, fileCounterInput, dirHandle, filenamePreview);
+    await savePhoto(canvas, filePrefixInput, fileCounterInput, dirHandle, filenamePreview, downloadButton);
     requestRender();
   });
-}
+});
 
 if (installBtn) {
   installBtn.addEventListener('click', async () => {
