@@ -28,7 +28,7 @@ body {
   height: 100dvh;
   margin: 0;
   overflow: hidden;
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
 }
 
 body { 
@@ -1295,7 +1295,7 @@ input[type=range]::-moz-range-thumb { background: var(--primary-hover); border-c
 }
 
 .canvas-wrap::after {
-  content: "Klik atau ketuk kanvas untuk menambah foto\A atau jatuhkan foto di sini";
+  content: "Tambahkan foto dari tombol Tambah atau Kamera\A atau jatuhkan foto di sini";
   inset: 24px;
   border: 1px dashed rgba(226, 232, 240, 0.38);
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(30, 41, 59, 0.38));
@@ -1569,6 +1569,19 @@ input[type=range]::-moz-range-thumb { background: var(--primary-hover); border-c
   .control-card { scroll-snap-align: start; padding: 12px; }
   .data-input-grid { grid-template-columns: minmax(0, 1fr) 82px; }
   .stamp-align-btn { min-height: 33px; }
+
+  .is-android .app-layout,
+  .is-android .app-layout .controls {
+    overscroll-behavior: none;
+  }
+
+  .is-android .app-layout .controls {
+    scroll-snap-type: none;
+  }
+
+  .app-layout .canvas-wrap::after {
+    content: "Ketuk kanvas untuk menambah foto";
+  }
 }
 
 /* Keep the Japandi layer last: the responsive workspace rules above define

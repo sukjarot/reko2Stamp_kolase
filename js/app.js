@@ -1518,6 +1518,10 @@ window.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', handlePointerUp);
 
 canvasContainer.addEventListener('click', () => {
+  // Desktop canvas clicks remain available for editing, but photo picking is
+  // intentionally limited to the mobile layout.
+  if (!window.matchMedia('(max-width: 768px)').matches) return;
+
   if (canvasGestureMoved) {
     canvasTapStart = null;
     canvasGestureMoved = false;
@@ -1908,12 +1912,16 @@ syncControlsFromStamp(stamps[0]);
 updateCollageInfo();
 requestRender();
 
-// Safari/iOS versions that do not fully support `overscroll-behavior` can still
-// pass a pull gesture from the editor to the page. Keep scrolling native inside
-// the editor, but cancel only pulls made after its scroll boundary is reached.
+// Android browsers and embedded WebViews do not always honor
+// `overscroll-behavior` on an internal scrolling panel. Mark Android so its
+// mobile rules can turn off scroll snapping, then cancel only pulls made after
+// a scroll boundary is reached.
 (() => {
   const editorPanel = document.querySelector('.app-layout .controls');
   if (!editorPanel) return;
+
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  document.documentElement.classList.toggle('is-android', isAndroid);
 
   let touchStartX = 0;
   let touchStartY = 0;
@@ -1940,6 +1948,7 @@ requestRender();
   }, { passive: true });
 
   document.addEventListener('touchmove', (event) => {
+    if (!isAndroid) return;
     if (event.touches.length !== 1) return;
 
     const touch = event.touches[0];
