@@ -1282,6 +1282,8 @@ input[type=range]::-moz-range-thumb { background: var(--primary-hover); border-c
   flex-direction: column;
   height: calc(100dvh - 50px);
   min-height: 0;
+  overflow: hidden;
+  touch-action: none;
 }
 
 .app-layout .canvas-wrap {
@@ -1540,6 +1542,7 @@ input[type=range]::-moz-range-thumb { background: var(--primary-hover); border-c
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
+    touch-action: pan-y;
     scroll-snap-type: y proximity;
     border-radius: 24px 24px 0 0;
     border: 1px solid rgba(255, 255, 255, 0.12);

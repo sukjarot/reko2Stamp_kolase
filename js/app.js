@@ -1907,3 +1907,58 @@ ensureStampState();
 syncControlsFromStamp(stamps[0]);
 updateCollageInfo();
 requestRender();
+
+// Safari/iOS versions that do not fully support `overscroll-behavior` can still
+// pass a pull gesture from the editor to the page. Keep scrolling native inside
+// the editor, but cancel only pulls made after its scroll boundary is reached.
+(() => {
+  const editorPanel = document.querySelector('.app-layout .controls');
+  if (!editorPanel) return;
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  const getScrollableAncestor = (target) => {
+    let element = target instanceof Element ? target : null;
+
+    while (element && element !== document.body) {
+      const overflowY = window.getComputedStyle(element).overflowY;
+      if (/(auto|scroll)/.test(overflowY) && element.scrollHeight > element.clientHeight) {
+        return element;
+      }
+      if (element === editorPanel) break;
+      element = element.parentElement;
+    }
+
+    return editorPanel.contains(target) ? editorPanel : null;
+  };
+
+  document.addEventListener('touchstart', (event) => {
+    if (event.touches.length !== 1) return;
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (event) => {
+    if (event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+
+    // Do not interfere with horizontal gestures or the canvas pinch/pan logic.
+    if (Math.abs(deltaX) > Math.abs(deltaY)) return;
+
+    const scrollable = getScrollableAncestor(event.target);
+    if (!scrollable) {
+      event.preventDefault();
+      return;
+    }
+
+    const atTop = scrollable.scrollTop <= 0;
+    const atBottom = Math.ceil(scrollable.scrollTop + scrollable.clientHeight) >= scrollable.scrollHeight;
+    if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
+      event.preventDefault();
+    }
+  }, { passive: false });
+})();
