@@ -217,8 +217,37 @@
 
       <div class="control-card layout-card">
         <div class="control-card-title">Layout &amp; Edit</div>
-        <label for="layoutSelect">Layout Kolase</label>
-        <select id="layoutSelect"><option value="auto">Auto</option><option value="vertical">2 Foto: Atas-Bawah</option><option value="horizontal">2 Foto: Kiri-Kanan</option><option value="top1_bottom2">3 Foto: 1 Atas, 2 Bawah</option><option value="top2_bottom1">3 Foto: 2 Atas, 1 Bawah</option><option value="left_big_right2">3 Foto: Kiri Besar, Kanan 2 Kecil</option></select>
+        <span class="layout-picker-label">Layout Kolase</span>
+        <div class="layout-picker-grid" role="group" aria-label="Pilih layout kolase">
+          <button class="layout-picker-option is-active" type="button" data-layout="auto" aria-pressed="true" title="Pilih layout otomatis">
+            <span class="layout-illustration layout-illustration--auto" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>Auto</span>
+          </button>
+          <button class="layout-picker-option" type="button" data-layout="vertical" aria-pressed="false" title="2 foto atas dan bawah">
+            <span class="layout-illustration layout-illustration--vertical" aria-hidden="true"><i></i><i></i></span>
+            <span>2 Atas-Bawah</span>
+          </button>
+          <button class="layout-picker-option" type="button" data-layout="horizontal" aria-pressed="false" title="2 foto kiri dan kanan">
+            <span class="layout-illustration layout-illustration--horizontal" aria-hidden="true"><i></i><i></i></span>
+            <span>2 Kiri-Kanan</span>
+          </button>
+          <button class="layout-picker-option" type="button" data-layout="top1_bottom2" aria-pressed="false" title="1 foto di atas dan 2 foto di bawah">
+            <span class="layout-illustration layout-illustration--top1-bottom2" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>1 Atas, 2 Bawah</span>
+          </button>
+          <button class="layout-picker-option" type="button" data-layout="top2_bottom1" aria-pressed="false" title="2 foto di atas dan 1 foto di bawah">
+            <span class="layout-illustration layout-illustration--top2-bottom1" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>2 Atas, 1 Bawah</span>
+          </button>
+          <button class="layout-picker-option" type="button" data-layout="left_big_right2" aria-pressed="false" title="1 foto besar di kiri dan 2 foto di kanan">
+            <span class="layout-illustration layout-illustration--left-big-right2" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>Kiri Besar</span>
+          </button>
+          <button class="layout-picker-option" type="button" data-layout="vertical_3" aria-pressed="false" title="3 foto tersusun dari atas ke bawah">
+            <span class="layout-illustration layout-illustration--vertical3" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>3 Atas-Bawah</span>
+          </button>
+        </div>
         <div class="action-grid quick-action-grid"><button id="resetView" class="main-btn btn-secondary" type="button">Reset</button><button id="rotateBtn" class="main-btn btn-secondary" type="button">Putar</button><button id="toggleCrop" class="main-btn btn-secondary" type="button">Potong</button></div>
       </div>
 

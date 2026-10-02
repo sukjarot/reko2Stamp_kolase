@@ -101,7 +101,7 @@ let canvasTapStart = null;
 let canvasGestureMoved = false;
 
 const addPhotoInput = document.getElementById('addPhotoInput');
-const layoutSelect = document.getElementById('layoutSelect');
+const layoutButtons = Array.from(document.querySelectorAll('[data-layout]'));
 const dtInput = document.getElementById('dtInput');
 const showDateToggle = document.getElementById('showDateToggle');
 const locInput = document.getElementById('locInput');
@@ -166,9 +166,21 @@ const closeMapBtn = document.getElementById('closeMapBtn');
 const now = new Date();
 const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 dtInput.value = localIso;
-if (layoutSelect) {
-  selectedLayoutKey = layoutSelect.value || 'auto';
+
+function syncLayoutPicker() {
+  layoutButtons.forEach((button) => {
+    const isActive = button.dataset.layout === selectedLayoutKey;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
 }
+
+function setSelectedLayoutKey(layoutKey) {
+  selectedLayoutKey = layoutKey || 'auto';
+  syncLayoutPicker();
+}
+
+syncLayoutPicker();
 
 function requestRender() {
   if (!isDrawing) {
@@ -421,10 +433,7 @@ function resetImageAdjustments() {
   setPanningState(false);
 
   if (originalCollageImages.length) {
-    selectedLayoutKey = originalSelectedLayoutKey || 'auto';
-    if (layoutSelect) {
-      layoutSelect.value = selectedLayoutKey;
-    }
+    setSelectedLayoutKey(originalSelectedLayoutKey || 'auto');
     collageImages = [...originalCollageImages];
     resetCollageFrameTransforms();
     rebuildCollageSource();
@@ -447,15 +456,18 @@ function getVisibleCollageCount() {
 
 // [ADDED]
 function validateLayoutKey() {
-  if (selectedLayoutKey === 'auto') return;
+  if (selectedLayoutKey === 'auto') {
+    syncLayoutPicker();
+    return;
+  }
 
   const presets = COLLAGE_LAYOUT_PRESETS[collageImages.length];
   if (!presets || !presets[selectedLayoutKey]) {
-    selectedLayoutKey = 'auto';
-    if (layoutSelect) {
-      layoutSelect.value = 'auto';
-    }
+    setSelectedLayoutKey('auto');
+    return;
   }
+
+  syncLayoutPicker();
 }
 
 // [ADDED]
@@ -633,7 +645,7 @@ function renderStampOptions() {
     selectedStampId = stamps[0].id;
   }
 
-  if (selectedStampId) {
+  if (selectedStampId !== null && stamps.some((stamp) => stamp.id === selectedStampId)) {
     stampSelect.value = selectedStampId;
   } else {
     stampSelect.selectedIndex = -1;
@@ -721,6 +733,9 @@ function isCollageSelectionControl(target) {
 function ensureStampState() {
   if (!stamps.length) {
     stamps = [createStamp()];
+    selectedStampId = stamps[0].id;
+  } else if (selectedStampId !== null && !stamps.some((stamp) => stamp.id === selectedStampId)) {
+    // Keep a valid active stamp during image or collage source updates.
     selectedStampId = stamps[0].id;
   }
   renderStampOptions();
@@ -1605,27 +1620,11 @@ if (addPhotoInput) {
   });
 }
 
-// [ADDED] Layout changes reuse the same collage source rebuild path.
-if (layoutSelect) {
-  layoutSelect.addEventListener('change', () => {
-    selectedLayoutKey = layoutSelect.value || 'auto';
-    ensureCollageFrameTransforms();
-
-    if (collageImages.length > getActiveFrameCapacity()) {
-      alert('Sebagian foto tersimpan di state, tapi tidak tampil karena layout ini punya frame lebih sedikit.');
-    }
-
-    rebuildCollageSource();
-  });
-}
-
-// [ADDED]
-document.querySelectorAll('[data-layout]').forEach((btn) => {
+// Layout buttons reuse the same collage source rebuild path.
+layoutButtons.forEach((btn) => {
   btn.addEventListener('click', () => {
-    selectedLayoutKey = btn.dataset.layout || 'auto';
-    if (layoutSelect) {
-      layoutSelect.value = selectedLayoutKey;
-    }
+    setSelectedLayoutKey(btn.dataset.layout);
+    ensureCollageFrameTransforms();
     rebuildCollageSource();
   });
 });
@@ -1822,10 +1821,8 @@ clearBtn.addEventListener('click', () => {
   setPanningState(false);
   resetViewport();
 
-  stamps = [createStamp({ location: '', dateTime: getCurrentIsoDateTime() })];
-  selectedStampId = stamps[0].id;
-  renderStampOptions();
-  syncControlsFromStamp(stamps[0]);
+  ensureStampState();
+  syncControlsFromStamp(getSelectedStamp());
   updateCollageInfo();
   requestRender();
   showToast('Semua foto dihapus.', 'success');
