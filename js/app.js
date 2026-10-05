@@ -801,6 +801,11 @@ function applySourceImage(nextSource, usingCanvas) {
   setupHighResCanvas(canvas, ctx, sourceImage, isUsingCanvasSource, MAX_DIMENSION);
   ensureStampState();
   scaleStampPositions(previousWidth, previousHeight, canvas.width, canvas.height);
+
+  if (selectedStampId === null && stamps.length > 0) {
+    selectStamp(stamps[0].id, true);
+  }
+
   resetViewport();
   updateCollageInfo();
   requestRender();
