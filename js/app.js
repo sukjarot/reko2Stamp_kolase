@@ -8,7 +8,6 @@ if ('serviceWorker' in navigator) {
       .then((reg) => {
         console.log('Service Worker terdaftar!', reg.scope);
 
-        // Helper: send message to a service worker
         function sendSkipWaitingMessage(sw) {
           try {
             sw.postMessage({ type: 'SKIP_WAITING' });
@@ -17,18 +16,15 @@ if ('serviceWorker' in navigator) {
           }
         }
 
-        // If there's an updated worker already waiting, ask it to skip waiting
         if (reg.waiting) {
           sendSkipWaitingMessage(reg.waiting);
         }
 
-        // When a new SW is found (installing), watch its state
         reg.addEventListener('updatefound', () => {
           const newSW = reg.installing;
           if (!newSW) return;
           newSW.addEventListener('statechange', () => {
             if (newSW.state === 'installed') {
-              // If there's an existing controller, this is an update
               if (navigator.serviceWorker.controller) {
                 sendSkipWaitingMessage(newSW);
               }
@@ -38,8 +34,6 @@ if ('serviceWorker' in navigator) {
       })
       .catch((err) => console.log('Gagal daftar Service Worker:', err));
 
-    // When the controlling service worker changes, show update notification
-    // then reload to apply the new one.
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (refreshing) return;
@@ -49,12 +43,12 @@ if ('serviceWorker' in navigator) {
       } catch (e) {
         console.log('Aplikasi diperbarui — memuat ulang.');
       }
-      // Allow the toast to be visible briefly before reloading
       setTimeout(() => window.location.reload(), 1400);
     });
   });
 }
 
+// Global Image and Collage State
 let sourceImage = null;
 let isUsingCanvasSource = false;
 let imgLoaded = false;
@@ -63,12 +57,15 @@ let collageImages = [];
 let collageFrameTransforms = [];
 let originalCollageImages = [];
 let originalSelectedLayoutKey = 'auto';
-// [ADDED]
 let selectedLayoutKey = 'auto';
+
+// Stamp State
 let stamps = [];
 let selectedStampId = null;
 let stampCounter = 1;
 let activeDragStampId = null;
+
+// Collage Frame Selection & Drag State
 let activeFrameIndex = null;
 let initialFrameTransform = null;
 let pinchFrameIndex = null;
@@ -77,16 +74,19 @@ let selectedCollageImageIndex = null;
 let dragSwapTargetIndex = null;
 let pendingImportChoiceResolve = null;
 
+// Viewport & Pan/Zoom State
 let viewScale = 1;
 let viewX = 0;
 let viewY = 0;
 
+// Crop State
 let cropMode = false;
 let cropRect = null;
 let cropAction = null;
 let dragStartPos = { x: 0, y: 0 };
 let initialCropRect = null;
 
+// Pinch & Gesture State
 let initialPinchDist = 0;
 let initialScale = 1;
 let isDrawing = false;
@@ -100,6 +100,7 @@ let canvasDragDepth = 0;
 let canvasTapStart = null;
 let canvasGestureMoved = false;
 
+// DOM Element References
 const addPhotoInput = document.getElementById('addPhotoInput');
 const layoutSelect = document.getElementById('layoutSelect');
 const dtInput = document.getElementById('dtInput');
@@ -130,6 +131,7 @@ const rotateBtn = document.getElementById('rotateBtn');
 const canvasContainer = document.getElementById('canvasContainer');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+
 const imageImportPrompt = document.getElementById('imageImportPrompt');
 const imageImportPromptText = document.getElementById('imageImportPromptText');
 const replaceImageChoice = document.getElementById('replaceImageChoice');
@@ -163,10 +165,14 @@ const mapModal = document.getElementById('mapModal');
 const mapBtn = document.getElementById('mapBtn');
 const closeMapBtn = document.getElementById('closeMapBtn');
 
+// Initial Date & Time setup
 const now = new Date();
 const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-dtInput.value = localIso;
+if (dtInput) {
+  dtInput.value = localIso;
+}
 
+// Layout Picker Synchronization
 function syncLayoutPicker() {
   if (layoutSelect) layoutSelect.value = selectedLayoutKey;
 }
@@ -245,7 +251,9 @@ function clampScale(nextScale) {
 
 function setPanningState(isActive) {
   isPanning = isActive;
-  canvasContainer.classList.toggle('is-panning', isActive);
+  if (canvasContainer) {
+    canvasContainer.classList.toggle('is-panning', isActive);
+  }
 }
 
 function applyZoom(nextScale, clientX, clientY) {
@@ -264,7 +272,6 @@ function applyZoom(nextScale, clientX, clientY) {
   updateTransform();
 }
 
-// [UPDATED] Show current layout capacity without changing the existing info element.
 function updateCollageInfo() {
   if (collageInfo) {
     const capacity = getCollageFrameCapacity(selectedLayoutKey);
@@ -405,14 +412,12 @@ function removeCollageImageAt(index) {
   showToast(`Foto ${removedIndex + 1} dihapus dari kolase.`, 'success');
 }
 
-// [ADDED]
 function ensureCollageFrameTransforms() {
   collageFrameTransforms = collageImages.map((_, index) => (
     normalizeFrameTransform(collageFrameTransforms[index] || getDefaultFrameTransform())
   ));
 }
 
-// [ADDED]
 function resetCollageFrameTransforms() {
   collageFrameTransforms = collageImages.map(() => getDefaultFrameTransform());
 }
@@ -430,9 +435,11 @@ function resetImageAdjustments() {
   } else {
     cropRect = null;
     cropAction = null;
-    toggleCropBtn.textContent = 'Potong';
-    toggleCropBtn.classList.remove('btn-danger');
-    toggleCropBtn.classList.add('btn-secondary');
+    if (toggleCropBtn) {
+      toggleCropBtn.textContent = 'Potong';
+      toggleCropBtn.classList.remove('btn-danger');
+      toggleCropBtn.classList.add('btn-secondary');
+    }
   }
 
   activeFrameIndex = null;
@@ -453,17 +460,14 @@ function resetImageAdjustments() {
   rebuildCollageSource();
 }
 
-// [ADDED]
 function getActiveFrameCapacity() {
   return getCollageFrameCapacity(selectedLayoutKey);
 }
 
-// [ADDED]
 function getVisibleCollageCount() {
   return Math.min(collageImages.length, getActiveFrameCapacity());
 }
 
-// [ADDED]
 function validateLayoutKey() {
   if (selectedLayoutKey === 'auto') {
     syncLayoutPicker();
@@ -479,7 +483,6 @@ function validateLayoutKey() {
   syncLayoutPicker();
 }
 
-// [ADDED]
 function getFrameHitAtCanvasPoint(pos) {
   if (!pos || !collageImages.length) return null;
 
@@ -493,7 +496,6 @@ function getFrameHitAtCanvasPoint(pos) {
   );
 }
 
-// [ADDED]
 function getCollageFrameSlotRect(frameIndex) {
   if (frameIndex === null || frameIndex < 0 || frameIndex >= getVisibleCollageCount()) {
     return null;
@@ -507,7 +509,6 @@ function getCollageFrameSlotRect(frameIndex) {
   return getCollageSlotRect(slot, canvas.width, canvas.height, gap);
 }
 
-// [ADDED]
 function applyFrameTransform(frameIndex, nextTransform) {
   if (frameIndex === null || frameIndex < 0 || frameIndex >= collageImages.length) return;
 
@@ -536,7 +537,6 @@ function applyFrameTransform(frameIndex, nextTransform) {
   requestCollageTransformRender();
 }
 
-// [ADDED]
 function zoomFrameAtPoint(frameIndex, scaleFactor, pos) {
   if (frameIndex === null || frameIndex < 0 || !pos) return false;
 
@@ -622,14 +622,15 @@ function createStamp(overrides = {}) {
     label: `Stamp ${stampCounter - 1}`,
     x: position.x,
     y: position.y,
-    showDate: showDateToggle.checked,
-    dateTime: dtInput.value || localIso,
-    location: locInput.value.trim(),
-    size: parseInt(sizeSlider.value, 10),
-    opacity: parseInt(opacitySlider.value, 10),
-    color: fontColor.value || '#ffffff',
-    fontFamily: fontSelect.value || 'Arial',
+    showDate: showDateToggle ? showDateToggle.checked : true,
+    dateTime: (dtInput && dtInput.value) || localIso,
+    location: (locInput && locInput.value.trim()) || '',
+    size: (sizeSlider && parseInt(sizeSlider.value, 10)) || 80,
+    opacity: (opacitySlider && parseInt(opacitySlider.value, 10)) || 90,
+    color: (fontColor && fontColor.value) || '#ffffff',
+    fontFamily: (fontSelect && fontSelect.value) || 'Arial',
     textAlign: 'left',
+    positionPreset: 'left',
     ...overrides
   };
 }
@@ -645,6 +646,7 @@ function refreshStampLabels() {
 }
 
 function renderStampOptions() {
+  if (!stampSelect) return;
   refreshStampLabels();
   stampSelect.innerHTML = stamps
     .map((stamp) => `<option value="${stamp.id}">${stamp.label}</option>`)
@@ -660,7 +662,9 @@ function renderStampOptions() {
     stampSelect.selectedIndex = -1;
   }
 
-  deleteStampBtn.disabled = stamps.length <= 1 || selectedStampId === null;
+  if (deleteStampBtn) {
+    deleteStampBtn.disabled = stamps.length <= 1 || selectedStampId === null;
+  }
 }
 
 function syncAlignButtons(stamp) {
@@ -692,15 +696,15 @@ function moveStampToPreset(stamp, preset) {
 function syncControlsFromStamp(stamp) {
   if (!stamp) return;
 
-  showDateToggle.checked = !!stamp.showDate;
-  dtInput.value = stamp.dateTime || localIso;
-  locInput.value = stamp.location || '';
-  sizeSlider.value = stamp.size;
-  sizeValDisplay.textContent = `${stamp.size}px`;
-  opacitySlider.value = stamp.opacity;
-  opacityValDisplay.textContent = `${stamp.opacity}%`;
-  fontColor.value = stamp.color || '#ffffff';
-  fontSelect.value = stamp.fontFamily || 'Arial';
+  if (showDateToggle) showDateToggle.checked = !!stamp.showDate;
+  if (dtInput) dtInput.value = stamp.dateTime || localIso;
+  if (locInput) locInput.value = stamp.location || '';
+  if (sizeSlider) sizeSlider.value = stamp.size;
+  if (sizeValDisplay) sizeValDisplay.textContent = `${stamp.size}px`;
+  if (opacitySlider) opacitySlider.value = stamp.opacity;
+  if (opacityValDisplay) opacityValDisplay.textContent = `${stamp.opacity}%`;
+  if (fontColor) fontColor.value = stamp.color || '#ffffff';
+  if (fontSelect) fontSelect.value = stamp.fontFamily || 'Arial';
   const activePosition = (stamp.positionPreset || getStampTextAlign(stamp) || 'left');
   stamp.positionPreset = activePosition;
   syncAlignButtons(stamp);
@@ -735,16 +739,11 @@ function clearCollageSelection() {
   requestRender();
 }
 
-function isCollageSelectionControl(target) {
-  return !!(collageSlotList && target && collageSlotList.contains(target));
-}
-
 function ensureStampState() {
   if (!stamps.length) {
     stamps = [createStamp()];
     selectedStampId = stamps[0].id;
   } else if (selectedStampId !== null && !stamps.some((stamp) => stamp.id === selectedStampId)) {
-    // Keep a valid active stamp during image or collage source updates.
     selectedStampId = stamps[0].id;
   }
   renderStampOptions();
@@ -754,13 +753,14 @@ function syncSelectedStampFromControls() {
   const stamp = getSelectedStamp();
   if (!stamp) return;
 
-  stamp.showDate = showDateToggle.checked;
-  stamp.dateTime = dtInput.value || localIso;
-  stamp.location = locInput.value.trim();
-  stamp.size = parseInt(sizeSlider.value, 10);
-  stamp.opacity = parseInt(opacitySlider.value, 10);
-  stamp.color = fontColor.value || '#ffffff';
-  stamp.fontFamily = fontSelect.value || 'Arial';
+  if (showDateToggle) stamp.showDate = showDateToggle.checked;
+  if (dtInput) stamp.dateTime = dtInput.value || localIso;
+  if (locInput) stamp.location = locInput.value.trim();
+  if (sizeSlider) stamp.size = parseInt(sizeSlider.value, 10);
+  if (opacitySlider) stamp.opacity = parseInt(opacitySlider.value, 10);
+  if (fontColor) stamp.color = fontColor.value || '#ffffff';
+  if (fontSelect) stamp.fontFamily = fontSelect.value || 'Arial';
+
   if (stamp.positionPreset === 'left' || stamp.positionPreset === 'center' || stamp.positionPreset === 'right') {
     stamp.textAlign = stamp.positionPreset;
   } else {
@@ -768,11 +768,997 @@ function syncSelectedStampFromControls() {
   }
   constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height, 32);
 
-  sizeValDisplay.textContent = `${stamp.size}px`;
-  opacityValDisplay.textContent = `${stamp.opacity}%`;
+  if (sizeValDisplay) sizeValDisplay.textContent = `${stamp.size}px`;
+  if (opacityValDisplay) opacityValDisplay.textContent = `${stamp.opacity}%`;
   requestRender();
 }
 
+function scaleStampPositions(previousWidth, previousHeight, nextWidth, nextHeight) {
+  if (!previousWidth || !previousHeight || !nextWidth || !nextHeight) {
+    stamps.forEach((stamp, index) => {
+      Object.assign(stamp, getDefaultStampPosition(index));
+      constrainStampTextPosition(ctx, stamp, nextWidth || canvas.width, nextHeight || canvas.height);
+    });
+    return;
+  }
+
+  const ratioX = nextWidth / previousWidth;
+  const ratioY = nextHeight / previousHeight;
+
+  stamps.forEach((stamp) => {
+    stamp.x *= ratioX;
+    stamp.y *= ratioY;
+    constrainStampTextPosition(ctx, stamp, nextWidth, nextHeight);
+  });
+}
+
+function resetViewport() {
+  viewScale = 1;
+  viewX = 0;
+  viewY = 0;
+  updateTransform();
+}
+
+function applySourceImage(nextSource, usingCanvas) {
+  const previousWidth = canvas.width;
+  const previousHeight = canvas.height;
+
+  sourceImage = nextSource;
+  isUsingCanvasSource = usingCanvas;
+  imgLoaded = !!nextSource;
+
+  if (!imgLoaded) {
+    requestRender();
+    return;
+  }
+
+  setupHighResCanvas(canvas, ctx, sourceImage, isUsingCanvasSource, MAX_DIMENSION);
+  ensureStampState();
+  scaleStampPositions(previousWidth, previousHeight, canvas.width, canvas.height);
+
+  if (selectedStampId === null && stamps.length > 0) {
+    selectStamp(stamps[0].id, true);
+  }
+
+  resetViewport();
+  updateCollageInfo();
+  requestRender();
+}
+
+function composeCurrentCollageSource() {
+  if (!collageImages.length) return null;
+
+  ensureCollageFrameTransforms();
+
+  if (collageImages.length === 1 && selectedLayoutKey === 'auto') {
+    return collageImages[0];
+  }
+
+  return composeCollageCanvas(
+    collageImages,
+    COLLAGE_MAX_DIMENSION,
+    selectedLayoutKey,
+    collageFrameTransforms
+  );
+}
+
+function requestCollageTransformRender() {
+  if (isCollageRenderQueued) return;
+
+  isCollageRenderQueued = true;
+  requestAnimationFrame(() => {
+    isCollageRenderQueued = false;
+
+    if (collageImages.length > 1 || selectedLayoutKey !== 'auto') {
+      const composedSource = composeCurrentCollageSource();
+      if (composedSource) {
+        sourceImage = composedSource;
+        isUsingCanvasSource = true;
+      }
+    }
+
+    requestRender();
+  });
+}
+
+function rebuildCollageSource() {
+  if (!collageImages.length) {
+    sourceImage = null;
+    isUsingCanvasSource = false;
+    imgLoaded = false;
+    selectedCollageImageIndex = null;
+    updateCollageInfo();
+    requestRender();
+    return;
+  }
+
+  validateLayoutKey();
+  clampSelectedCollageImageIndex();
+  const composedSource = composeCurrentCollageSource();
+
+  applySourceImage(composedSource, !(composedSource instanceof HTMLImageElement));
+  updateCollageInfo();
+}
+
+function addStamp() {
+  ensureStampState();
+  const baseStamp = getSelectedStamp();
+  const position = getDefaultStampPosition(stamps.length);
+  const newStamp = createStamp({
+    x: position.x,
+    y: position.y,
+    showDate: baseStamp ? baseStamp.showDate : (showDateToggle ? showDateToggle.checked : true),
+    dateTime: baseStamp ? baseStamp.dateTime : ((dtInput && dtInput.value) || localIso),
+    location: baseStamp ? baseStamp.location : ((locInput && locInput.value.trim()) || ''),
+    size: baseStamp ? baseStamp.size : (sizeSlider ? parseInt(sizeSlider.value, 10) : 80),
+    opacity: baseStamp ? baseStamp.opacity : (opacitySlider ? parseInt(opacitySlider.value, 10) : 90),
+    color: baseStamp ? baseStamp.color : ((fontColor && fontColor.value) || '#ffffff'),
+    fontFamily: baseStamp ? baseStamp.fontFamily : ((fontSelect && fontSelect.value) || 'Arial'),
+    textAlign: baseStamp ? getStampTextAlign(baseStamp) : 'left',
+    positionPreset: baseStamp ? (baseStamp.positionPreset || 'left') : 'left'
+  });
+
+  if (baseStamp) {
+    placeStampToRightOfActiveStamp(newStamp, baseStamp);
+    constrainStampTextPosition(ctx, baseStamp, canvas.width, canvas.height);
+  }
+  constrainStampTextPosition(ctx, newStamp, canvas.width, canvas.height);
+  stamps.push(newStamp);
+  selectStamp(newStamp.id, true);
+}
+
+function deleteSelectedStamp() {
+  if (stamps.length <= 1) return;
+
+  const currentIndex = stamps.findIndex((stamp) => stamp.id === selectedStampId);
+  if (currentIndex === -1) return;
+
+  stamps.splice(currentIndex, 1);
+  const nextStamp = stamps[Math.max(0, currentIndex - 1)] || stamps[0];
+  selectStamp(nextStamp.id, true);
+}
+
+function drawSelectedCollageImageOutline() {
+  if (
+    cropMode ||
+    selectedCollageImageIndex === null ||
+    selectedCollageImageIndex < 0 ||
+    selectedCollageImageIndex >= getVisibleCollageCount()
+  ) {
+    return;
+  }
+
+  const hit = getCollageFrameAtPoint(
+    canvas.width / 2,
+    canvas.height / 2,
+    canvas.width,
+    canvas.height,
+    1,
+    'auto'
+  );
+  const layout = getCollageLayout(getVisibleCollageCount(), selectedLayoutKey);
+  const slot = layout[selectedCollageImageIndex];
+  const rect = slot
+    ? getCollageSlotRect(
+      slot,
+      canvas.width,
+      canvas.height,
+      getVisibleCollageCount() > 1 ? Math.max(8, Math.round(Math.min(canvas.width, canvas.height) * 0.008)) : 0
+    )
+    : (hit ? hit.rect : null);
+
+  if (!rect) return;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(59, 130, 246, 0.08)';
+  ctx.fillRect(rect.x + 2, rect.y + 2, Math.max(1, rect.w - 4), Math.max(1, rect.h - 4));
+  ctx.strokeStyle = 'rgba(59, 130, 246, 0.95)';
+  ctx.lineWidth = Math.max(5, Math.round(Math.min(canvas.width, canvas.height) * 0.006));
+  ctx.setLineDash([16, 8]);
+  ctx.lineDashOffset = -performance.now() / 60;
+  ctx.strokeRect(rect.x + 1, rect.y + 1, Math.max(1, rect.w - 2), Math.max(1, rect.h - 2));
+  ctx.restore();
+}
+
+function drawDragSwapTargetHighlight() {
+  if (
+    cropMode ||
+    dragSwapTargetIndex === null ||
+    dragSwapTargetIndex < 0 ||
+    dragSwapTargetIndex >= getVisibleCollageCount()
+  ) {
+    return;
+  }
+
+  const rect = getCollageFrameSlotRect(dragSwapTargetIndex);
+  if (!rect) return;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(34, 197, 94, 0.24)';
+  ctx.fillRect(rect.x + 3, rect.y + 3, Math.max(1, rect.w - 6), Math.max(1, rect.h - 6));
+  ctx.strokeStyle = 'rgba(34, 197, 94, 0.98)';
+  ctx.lineWidth = Math.max(8, Math.round(Math.min(canvas.width, canvas.height) * 0.01));
+  ctx.setLineDash([]);
+  ctx.strokeRect(rect.x + 2, rect.y + 2, Math.max(1, rect.w - 4), Math.max(1, rect.h - 4));
+  ctx.restore();
+}
+
+function draw() {
+  if (!imgLoaded || !sourceImage) {
+    canvas.width = 300;
+    canvas.height = 300;
+    ctx.fillStyle = '#0F172A';
+    ctx.fillRect(0, 0, 300, 300);
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '600 15px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Pilih Foto Dulu', 150, 150);
+    return;
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (collageImages.length === 1 && selectedLayoutKey === 'auto') {
+    ensureCollageFrameTransforms();
+    const slotRect = { x: 0, y: 0, w: canvas.width, h: canvas.height };
+    const frameTransform = clampFrameTransformToSlot(collageImages[0], slotRect, collageFrameTransforms[0]);
+    collageFrameTransforms[0] = frameTransform;
+    drawImageCover(ctx, sourceImage, 0, 0, canvas.width, canvas.height, frameTransform);
+  } else {
+    ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+  }
+
+  if (!isExportRender) {
+    drawSelectedCollageImageOutline();
+    drawDragSwapTargetHighlight();
+  }
+
+  stamps.forEach((stamp) => {
+    const text = buildStampText(stamp);
+    if (!text.trim()) return;
+
+    ctx.save();
+    ctx.globalAlpha = stamp.opacity / 100;
+    ctx.font = getStampFont(stamp);
+    ctx.fillStyle = stamp.color || '#ffffff';
+    ctx.textAlign = getStampTextAlign(stamp);
+
+    const shadowSize = Math.max(2, stamp.size / 15);
+    ctx.shadowColor = `rgba(0,0,0,${stamp.opacity / 100})`;
+    ctx.shadowBlur = shadowSize;
+    ctx.shadowOffsetX = shadowSize / 2;
+    ctx.shadowOffsetY = shadowSize / 2;
+
+    wrapText(
+      ctx,
+      text,
+      stamp.x,
+      stamp.y,
+      getStampMaxWidth(stamp, canvas.width),
+      stamp.size * 1.25
+    );
+    ctx.restore();
+  });
+
+  const selectedStamp = getSelectedStamp();
+  if (selectedStamp && !cropMode && !isExportRender) {
+    drawSelectedStampOutline(ctx, selectedStamp);
+  }
+
+  if (cropMode && !isExportRender) {
+    drawCropUI(ctx, canvas, cropRect, viewScale);
+  }
+}
+
+function renderForExport() {
+  isExportRender = true;
+  try {
+    draw();
+  } finally {
+    isExportRender = false;
+  }
+}
+
+function handlePointerDown(clientX, clientY) {
+  const pos = getCanvasPointFromClient(clientX, clientY, canvas, viewScale, viewX, viewY);
+  dragStartPos = pos;
+  dragSwapTargetIndex = null;
+
+  if (cropMode) {
+    const hit = getHitRegion(pos.x, pos.y, cropRect, viewScale);
+    if (hit) {
+      cropAction = hit;
+      initialCropRect = { ...cropRect };
+    } else {
+      cancelCrop();
+    }
+    return;
+  }
+
+  let targetStamp = null;
+  for (let i = stamps.length - 1; i >= 0; i--) {
+    const bbox = getTextBoundingBox(ctx, stamps[i]);
+    if (isPointInTextBoundingBox(pos.x, pos.y, bbox)) {
+      targetStamp = stamps[i];
+      break;
+    }
+  }
+
+  if (targetStamp) {
+    activeDragStampId = targetStamp.id;
+    selectStamp(targetStamp.id, true);
+    dragStartPos.offsetX = pos.x - targetStamp.x;
+    dragStartPos.offsetY = pos.y - targetStamp.y;
+    return;
+  }
+
+  const frameHit = getFrameHitAtCanvasPoint(pos);
+  if (frameHit) {
+    ensureCollageFrameTransforms();
+    activeFrameIndex = frameHit.index;
+    selectedCollageImageIndex = frameHit.index;
+    renderCollageSlots();
+    initialFrameTransform = normalizeFrameTransform(collageFrameTransforms[activeFrameIndex]);
+    setPanningState(true);
+    requestRender();
+    return;
+  }
+
+  clearCollageSelection();
+  setPanningState(true);
+  panStartX = clientX;
+  panStartY = clientY;
+}
+
+function handlePointerMove(clientX, clientY) {
+  const pos = getCanvasPointFromClient(clientX, clientY, canvas, viewScale, viewX, viewY);
+
+  if (cropMode && cropAction) {
+    if (cropAction === 'move') {
+      const dx = pos.x - dragStartPos.x;
+      const dy = pos.y - dragStartPos.y;
+      cropRect.x = Math.max(0, Math.min(canvas.width - cropRect.w, initialCropRect.x + dx));
+      cropRect.y = Math.max(0, Math.min(canvas.height - cropRect.h, initialCropRect.y + dy));
+    } else {
+      const dx = pos.x - dragStartPos.x;
+      const dy = pos.y - dragStartPos.y;
+      const original = initialCropRect;
+
+      if (cropAction.includes('n')) {
+        cropRect.y = Math.max(0, original.y + dy);
+        cropRect.h = Math.max(10, original.h - dy);
+      }
+      if (cropAction.includes('s')) {
+        cropRect.h = Math.max(10, Math.min(canvas.height - cropRect.y, original.h + dy));
+      }
+      if (cropAction.includes('w')) {
+        cropRect.x = Math.max(0, original.x + dx);
+        cropRect.w = Math.max(10, original.w - dx);
+      }
+      if (cropAction.includes('e')) {
+        cropRect.w = Math.max(10, Math.min(canvas.width - cropRect.x, original.w + dx));
+      }
+    }
+
+    requestRender();
+    return;
+  }
+
+  if (activeDragStampId) {
+    const stamp = stamps.find((item) => item.id === activeDragStampId);
+    if (!stamp) return;
+
+    stamp.x = pos.x - (dragStartPos.offsetX || 0);
+    stamp.y = pos.y - (dragStartPos.offsetY || 0);
+    constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
+
+    requestRender();
+    return;
+  }
+
+  if (activeFrameIndex !== null && initialFrameTransform) {
+    const frameHit = getFrameHitAtCanvasPoint(pos);
+    const nextSwapTargetIndex = frameHit && frameHit.index !== activeFrameIndex
+      ? frameHit.index
+      : null;
+
+    if (nextSwapTargetIndex !== null) {
+      if (dragSwapTargetIndex !== nextSwapTargetIndex) {
+        collageFrameTransforms[activeFrameIndex] = { ...initialFrameTransform };
+        dragSwapTargetIndex = nextSwapTargetIndex;
+        setPanningState(false);
+        requestCollageTransformRender();
+      }
+      return;
+    }
+
+    if (dragSwapTargetIndex !== null) {
+      dragSwapTargetIndex = null;
+      requestRender();
+
+      if (!frameHit || frameHit.index !== activeFrameIndex) {
+        return;
+      }
+
+      setPanningState(true);
+    }
+
+    const dx = pos.x - dragStartPos.x;
+    const dy = pos.y - dragStartPos.y;
+    applyFrameTransform(activeFrameIndex, {
+      scale: initialFrameTransform.scale,
+      offsetX: initialFrameTransform.offsetX + dx,
+      offsetY: initialFrameTransform.offsetY + dy
+    });
+    return;
+  }
+
+  if (isPanning) {
+    const dx = clientX - panStartX;
+    const dy = clientY - panStartY;
+    viewX += dx;
+    viewY += dy;
+    panStartX = clientX;
+    panStartY = clientY;
+    updateTransform();
+  }
+}
+
+function handlePointerUp() {
+  if (cropMode && cropRect) {
+    if (cropRect.w < 0) {
+      cropRect.x += cropRect.w;
+      cropRect.w = Math.abs(cropRect.w);
+    }
+    if (cropRect.h < 0) {
+      cropRect.y += cropRect.h;
+      cropRect.h = Math.abs(cropRect.h);
+    }
+  }
+
+  if (activeDragStampId) {
+    const stamp = stamps.find((item) => item.id === activeDragStampId);
+    if (stamp) {
+      constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
+      requestRender();
+    }
+  }
+
+  const swapSourceIndex = activeFrameIndex;
+  const swapTargetIndex = dragSwapTargetIndex;
+  const shouldSwapFrames = (
+    swapSourceIndex !== null &&
+    swapTargetIndex !== null &&
+    swapTargetIndex !== swapSourceIndex &&
+    swapSourceIndex >= 0 &&
+    swapTargetIndex >= 0 &&
+    swapSourceIndex < collageImages.length &&
+    swapTargetIndex < collageImages.length
+  );
+
+  if (shouldSwapFrames) {
+    ensureCollageFrameTransforms();
+
+    [collageImages[swapSourceIndex], collageImages[swapTargetIndex]] = [
+      collageImages[swapTargetIndex],
+      collageImages[swapSourceIndex]
+    ];
+    [collageFrameTransforms[swapSourceIndex], collageFrameTransforms[swapTargetIndex]] = [
+      collageFrameTransforms[swapTargetIndex],
+      collageFrameTransforms[swapSourceIndex]
+    ];
+
+    selectedCollageImageIndex = swapTargetIndex;
+    activeFrameIndex = null;
+    initialFrameTransform = null;
+    pinchFrameIndex = null;
+    dragSwapTargetIndex = null;
+    activeDragStampId = null;
+    cropAction = null;
+    initialCropRect = null;
+    setPanningState(false);
+    delete dragStartPos.offsetX;
+    delete dragStartPos.offsetY;
+
+    rebuildCollageSource();
+    requestRender();
+    return;
+  }
+
+  const hadDragSwapTarget = dragSwapTargetIndex !== null;
+
+  cropAction = null;
+  initialCropRect = null;
+  activeDragStampId = null;
+  activeFrameIndex = null;
+  initialFrameTransform = null;
+  pinchFrameIndex = null;
+  dragSwapTargetIndex = null;
+  setPanningState(false);
+  delete dragStartPos.offsetX;
+  delete dragStartPos.offsetY;
+
+  if (hadDragSwapTarget) {
+    requestRender();
+  }
+}
+
+function cancelCrop() {
+  if (!cropMode) return;
+
+  cropMode = false;
+  cropRect = null;
+  cropAction = null;
+  if (toggleCropBtn) {
+    toggleCropBtn.textContent = 'Potong';
+    toggleCropBtn.classList.remove('btn-danger');
+    toggleCropBtn.classList.add('btn-secondary');
+  }
+  requestRender();
+}
+
+function getCurrentIsoDateTime() {
+  const date = new Date();
+  return new Date(date - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const tempImg = new Image();
+      tempImg.onload = () => resolve(tempImg);
+      tempImg.onerror = reject;
+      tempImg.src = ev.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function isDesktopFileDropAvailable() {
+  return window.matchMedia('(hover: hover) and (pointer: fine)').matches || window.innerWidth > 768;
+}
+
+function openAddPhotoPicker() {
+  if (addPhotoInput) addPhotoInput.click();
+}
+
+function startCanvasTap(clientX, clientY) {
+  canvasTapStart = { x: clientX, y: clientY };
+  canvasGestureMoved = false;
+}
+
+function trackCanvasGesture(clientX, clientY) {
+  if (!canvasTapStart) return;
+
+  const distance = Math.hypot(clientX - canvasTapStart.x, clientY - canvasTapStart.y);
+  if (distance > 10) canvasGestureMoved = true;
+}
+
+function getImageFilesFromDataTransfer(dataTransfer) {
+  return Array.from(dataTransfer && dataTransfer.files ? dataTransfer.files : [])
+    .filter((file) => file.type.startsWith('image/'));
+}
+
+function hasImageFileInDataTransfer(dataTransfer) {
+  if (!dataTransfer) return false;
+
+  const items = Array.from(dataTransfer.items || []);
+  if (items.length) {
+    return items.some((item) => item.kind === 'file' && item.type.startsWith('image/'));
+  }
+
+  return getImageFilesFromDataTransfer(dataTransfer).length > 0;
+}
+
+function setCanvasDropState(isActive) {
+  if (canvasContainer) {
+    canvasContainer.classList.toggle('is-drag-over', isActive);
+  }
+}
+
+async function importDroppedImageFiles(fileList) {
+  const files = getImageFilesFromDataTransfer({ files: fileList });
+  if (!files.length) return;
+
+  await importImageFilesWithChoice(files);
+}
+
+function replaceCollageWithImages(images) {
+  collageImages = images;
+  selectedCollageImageIndex = images.length ? 0 : null;
+  resetCollageFrameTransforms();
+  saveOriginalCollageState(collageImages);
+  rebuildCollageSource();
+  showToast(images.length === 1 ? 'Foto diganti.' : `${images.length} foto berhasil diganti.`, 'success');
+}
+
+function appendCollageImages(images) {
+  if (!images.length) return;
+
+  const capacity = getActiveFrameCapacity();
+  const remainingSlots = Math.max(0, capacity - collageImages.length);
+  if (!remainingSlots) {
+    alert(`Layout ini sudah penuh (${capacity} foto). Pilih layout lain atau hapus foto lama dulu.`);
+    return;
+  }
+
+  const nextImages = images.slice(0, remainingSlots);
+  if (images.length > remainingSlots) {
+    alert(`Sisa frame hanya ${remainingSlots}. Foto selebihnya diabaikan.`);
+  }
+
+  const firstAddedIndex = collageImages.length;
+  collageImages = [...collageImages, ...nextImages];
+  collageFrameTransforms = [
+    ...collageFrameTransforms,
+    ...nextImages.map(() => getDefaultFrameTransform())
+  ];
+  selectedCollageImageIndex = firstAddedIndex;
+  saveOriginalCollageState(originalCollageImages.length
+    ? [...originalCollageImages, ...nextImages]
+    : collageImages
+  );
+  rebuildCollageSource();
+  showToast(nextImages.length === 1 ? 'Foto berhasil ditambahkan ke kolase.' : `${nextImages.length} foto berhasil ditambahkan.`, 'success');
+}
+
+async function replaceCollageWithFiles(fileList) {
+  const files = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
+  if (!files.length) return;
+
+  const limitedFiles = files.slice(0, COLLAGE_LIMIT);
+  if (files.length > COLLAGE_LIMIT) {
+    alert(`Maksimal ${COLLAGE_LIMIT} foto untuk kolase. Foto selebihnya diabaikan.`);
+  }
+
+  const images = await Promise.all(limitedFiles.map(loadImageFromFile));
+  replaceCollageWithImages(images);
+}
+
+async function appendCollageWithFiles(fileList) {
+  const files = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
+  if (!files.length) return;
+
+  const capacity = getActiveFrameCapacity();
+  const remainingSlots = Math.max(0, capacity - collageImages.length);
+  const limitedFiles = files.slice(0, remainingSlots);
+  if (!remainingSlots) {
+    alert(`Layout ini sudah penuh (${capacity} foto). Pilih layout lain atau hapus foto lama dulu.`);
+    return;
+  }
+
+  if (files.length > remainingSlots) {
+    alert(`Sisa frame hanya ${remainingSlots}. Foto selebihnya diabaikan.`);
+  }
+
+  const images = await Promise.all(limitedFiles.map(loadImageFromFile));
+  appendCollageImages(images);
+}
+
+function appendCapturedImage(imageSource) {
+  appendCollageImages([imageSource]);
+}
+
+async function importCapturedImageWithChoice(imageSource) {
+  const choice = await requestImageImportChoice(1);
+  if (choice === 'replace') {
+    replaceCollageWithImages([imageSource]);
+    return true;
+  } else if (choice === 'append') {
+    appendCapturedImage(imageSource);
+    return true;
+  }
+
+  return false;
+}
+
+// CANVAS EVENT LISTENERS
+if (canvasContainer) {
+  canvasContainer.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      startCanvasTap(e.touches[0].clientX, e.touches[0].clientY);
+    } else {
+      canvasGestureMoved = true;
+    }
+
+    if (!imgLoaded) return;
+
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      initialPinchDist = getDist(e.touches);
+      initialScale = viewScale;
+      const midpointX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const midpointY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const midpoint = getCanvasPointFromClient(midpointX, midpointY, canvas, viewScale, viewX, viewY);
+      const frameHit = getFrameHitAtCanvasPoint(midpoint);
+      pinchFrameIndex = frameHit ? frameHit.index : null;
+      initialFrameScale = pinchFrameIndex !== null
+        ? normalizeFrameTransform(collageFrameTransforms[pinchFrameIndex]).scale
+        : 1;
+    } else if (e.touches.length === 1) {
+      handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: false });
+
+  canvasContainer.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 1) {
+      canvasGestureMoved = true;
+    } else {
+      trackCanvasGesture(e.touches[0].clientX, e.touches[0].clientY);
+    }
+
+    if (!imgLoaded) return;
+    e.preventDefault();
+
+    if (e.touches.length === 2) {
+      const currentDist = getDist(e.touches);
+      const midpointX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const midpointY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const midpoint = getCanvasPointFromClient(midpointX, midpointY, canvas, viewScale, viewX, viewY);
+      const scaleFactor = currentDist / initialPinchDist;
+
+      if (pinchFrameIndex !== null) {
+        const nextScale = Math.min(Math.max(initialFrameScale * scaleFactor, 1), 5);
+        applyFrameTransform(pinchFrameIndex, { scale: nextScale });
+      } else {
+        applyZoom(initialScale * scaleFactor, midpointX, midpointY);
+      }
+    } else if (e.touches.length === 1) {
+      handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: false });
+
+  canvasContainer.addEventListener('touchend', (e) => {
+    if (!e.touches.length) {
+      handlePointerUp();
+    }
+  });
+
+  canvasContainer.addEventListener('touchcancel', () => {
+    handlePointerUp();
+  });
+
+  canvasContainer.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    startCanvasTap(e.clientX, e.clientY);
+    if (!imgLoaded) return;
+    handlePointerDown(e.clientX, e.clientY);
+  });
+
+  canvasContainer.addEventListener('click', () => {
+    if (!window.matchMedia('(max-width: 768px)').matches && imgLoaded) return;
+
+    if (canvasGestureMoved) {
+      canvasTapStart = null;
+      canvasGestureMoved = false;
+      return;
+    }
+
+    canvasTapStart = null;
+    if (!imgLoaded) {
+      openAddPhotoPicker();
+    }
+  });
+
+  canvasContainer.addEventListener('wheel', (e) => {
+    if (!imgLoaded) return;
+
+    e.preventDefault();
+    const zoomStep = e.deltaY < 0 ? 1.12 : 0.9;
+    const pos = getCanvasPointFromClient(e.clientX, e.clientY, canvas, viewScale, viewX, viewY);
+    const frameHit = getFrameHitAtCanvasPoint(pos);
+    if (frameHit && zoomFrameAtPoint(frameHit.index, zoomStep, pos)) {
+      return;
+    }
+
+    applyZoom(viewScale * zoomStep, e.clientX, e.clientY);
+  }, { passive: false });
+
+  canvasContainer.addEventListener('dragenter', (e) => {
+    if (!isDesktopFileDropAvailable() || !hasImageFileInDataTransfer(e.dataTransfer)) return;
+
+    e.preventDefault();
+    canvasDragDepth += 1;
+    setCanvasDropState(true);
+  });
+
+  canvasContainer.addEventListener('dragover', (e) => {
+    if (!isDesktopFileDropAvailable() || !hasImageFileInDataTransfer(e.dataTransfer)) return;
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setCanvasDropState(true);
+  });
+
+  canvasContainer.addEventListener('dragleave', (e) => {
+    if (!isDesktopFileDropAvailable() || (!canvasDragDepth && !hasImageFileInDataTransfer(e.dataTransfer))) return;
+
+    e.preventDefault();
+    canvasDragDepth = Math.max(0, canvasDragDepth - 1);
+    if (!canvasDragDepth) {
+      setCanvasDropState(false);
+    }
+  });
+
+  canvasContainer.addEventListener('drop', async (e) => {
+    if (!isDesktopFileDropAvailable() || !hasImageFileInDataTransfer(e.dataTransfer)) {
+      canvasDragDepth = 0;
+      setCanvasDropState(false);
+      return;
+    }
+
+    e.preventDefault();
+    canvasDragDepth = 0;
+    setCanvasDropState(false);
+
+    try {
+      await importDroppedImageFiles(e.dataTransfer.files);
+    } catch (err) {
+      console.error('Gagal memuat foto dari drag-and-drop:', err);
+      alert('Foto gagal dimuat. Coba seret file gambar lain.');
+    }
+  });
+}
+
+window.addEventListener('mousemove', (e) => {
+  trackCanvasGesture(e.clientX, e.clientY);
+  if (!imgLoaded) return;
+  if (e.buttons === 1) {
+    handlePointerMove(e.clientX, e.clientY);
+  }
+});
+
+window.addEventListener('mouseup', handlePointerUp);
+
+// Photo input change listener
+if (addPhotoInput) {
+  addPhotoInput.addEventListener('change', async (e) => {
+    try {
+      await importImageFilesWithChoice(e.target.files);
+    } catch (err) {
+      console.error('Gagal menambah foto:', err);
+      alert('Foto gagal dimuat. Coba pilih file lain.');
+    } finally {
+      addPhotoInput.value = '';
+    }
+  });
+}
+
+// Camera Setup
+setupCameraEvents(
+  openCameraBtn,
+  closeCamBtn,
+  shutterBtn,
+  switchCamBtn,
+  rotateCamBtn,
+  cameraVideo,
+  cameraModal,
+  async (canvasSource) => {
+    const imported = await importCapturedImageWithChoice(canvasSource);
+    if (!imported) return;
+    if (dtInput) dtInput.value = getCurrentIsoDateTime();
+    syncSelectedStampFromControls();
+  }
+);
+
+// Rotate Button Listener
+if (rotateBtn) {
+  rotateBtn.addEventListener('click', () => {
+    if (!imgLoaded || !sourceImage) return;
+    const originalText = rotateBtn.textContent;
+    rotateBtn.textContent = '⏳';
+
+    requestAnimationFrame(() => {
+      const w = getSourceWidth(sourceImage, isUsingCanvasSource);
+      const h = getSourceHeight(sourceImage, isUsingCanvasSource);
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = h;
+      tempCanvas.height = w;
+
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+      tempCtx.rotate(90 * Math.PI / 180);
+      tempCtx.drawImage(sourceImage, -w / 2, -h / 2);
+
+      collageImages = [tempCanvas];
+      selectedCollageImageIndex = 0;
+      resetCollageFrameTransforms();
+      rebuildCollageSource();
+
+      if (cropMode) {
+        cancelCrop();
+      }
+
+      rotateBtn.textContent = originalText;
+    });
+  });
+}
+
+// Crop Button Listener
+if (toggleCropBtn) {
+  toggleCropBtn.addEventListener('click', () => {
+    if (!imgLoaded || !sourceImage) return;
+    if (cropMode) {
+      if (cropRect && cropRect.w > 10 && cropRect.h > 10) {
+        const croppedCanvas = applyCrop(sourceImage, isUsingCanvasSource, cropRect);
+        if (croppedCanvas) {
+          collageImages = [croppedCanvas];
+          selectedCollageImageIndex = 0;
+          resetCollageFrameTransforms();
+          rebuildCollageSource();
+        }
+      }
+
+      cropMode = false;
+      toggleCropBtn.textContent = 'Potong';
+      toggleCropBtn.classList.remove('btn-danger');
+      toggleCropBtn.classList.add('btn-secondary');
+    } else {
+      cropMode = true;
+      cropRect = {
+        x: canvas.width * 0.1,
+        y: canvas.height * 0.1,
+        w: canvas.width * 0.8,
+        h: canvas.height * 0.8
+      };
+      toggleCropBtn.textContent = 'Terapkan';
+      toggleCropBtn.classList.remove('btn-secondary');
+      toggleCropBtn.classList.add('btn-danger');
+    }
+
+    requestRender();
+  });
+}
+
+// Adjust Size Helper
+function adjustSize(val) {
+  if (!sizeSlider) return;
+  let current = parseInt(sizeSlider.value, 10);
+  let nextValue = current + val;
+  if (nextValue < 20) nextValue = 20;
+  if (nextValue > 300) nextValue = 300;
+
+  sizeSlider.value = nextValue;
+  if (sizeValDisplay) sizeValDisplay.textContent = `${nextValue}px`;
+  syncSelectedStampFromControls();
+}
+window.adjustSize = adjustSize;
+
+// Input and Slider Listeners
+if (sizeSlider) sizeSlider.addEventListener('input', syncSelectedStampFromControls);
+if (opacitySlider) opacitySlider.addEventListener('input', syncSelectedStampFromControls);
+if (showDateToggle) showDateToggle.addEventListener('change', syncSelectedStampFromControls);
+if (dtInput) dtInput.addEventListener('input', syncSelectedStampFromControls);
+if (fontSelect) fontSelect.addEventListener('change', syncSelectedStampFromControls);
+if (fontColor) fontColor.addEventListener('input', syncSelectedStampFromControls);
+
+if (locInput) {
+  locInput.addEventListener('input', () => {
+    const stamp = getSelectedStamp();
+    if (!stamp) return;
+    stamp.location = locInput.value.trim();
+    constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
+    requestRender();
+  });
+}
+
+document.addEventListener('reko:location-updated', (event) => {
+  const stamp = getSelectedStamp();
+  if (!stamp) return;
+  stamp.location = (event.detail && event.detail.value ? event.detail.value : '').trim();
+  constrainStampTextPosition(ctx, stamp, canvas.width, canvas.height);
+  requestRender();
+});
+
+if (stampSelect) {
+  stampSelect.addEventListener('change', (e) => {
+    selectStamp(e.target.value, true);
+  });
+}
+
+// Alignment Buttons
 alignButtons.forEach((button) => {
   button.addEventListener('click', () => {
     const stamp = getSelectedStamp();
@@ -787,8 +1773,8 @@ alignButtons.forEach((button) => {
   });
 });
 
-addStampBtn.addEventListener('click', addStamp);
-deleteStampBtn.addEventListener('click', deleteSelectedStamp);
+if (addStampBtn) addStampBtn.addEventListener('click', addStamp);
+if (deleteStampBtn) deleteStampBtn.addEventListener('click', deleteSelectedStamp);
 
 if (replaceImageChoice) {
   replaceImageChoice.addEventListener('click', () => resolveImageImportChoice('replace'));
@@ -825,38 +1811,43 @@ if (collageSlotList) {
   });
 }
 
-resetViewBtn.addEventListener('click', () => {
-  resetImageAdjustments();
-});
+if (resetViewBtn) {
+  resetViewBtn.addEventListener('click', () => {
+    resetImageAdjustments();
+  });
+}
 
-clearBtn.addEventListener('click', () => {
-  if (!confirm('Hapus foto ini?')) return;
+if (clearBtn) {
+  clearBtn.addEventListener('click', () => {
+    if (!confirm('Hapus foto ini?')) return;
 
-  collageImages = [];
-  collageFrameTransforms = [];
-  originalCollageImages = [];
-  originalSelectedLayoutKey = selectedLayoutKey;
-  selectedCollageImageIndex = null;
-  sourceImage = null;
-  isUsingCanvasSource = false;
-  imgLoaded = false;
-  cropMode = false;
-  cropRect = null;
-  activeFrameIndex = null;
-  initialFrameTransform = null;
-  pinchFrameIndex = null;
-  dragSwapTargetIndex = null;
-  setPanningState(false);
-  resetViewport();
+    collageImages = [];
+    collageFrameTransforms = [];
+    originalCollageImages = [];
+    originalSelectedLayoutKey = selectedLayoutKey;
+    selectedCollageImageIndex = null;
+    sourceImage = null;
+    isUsingCanvasSource = false;
+    imgLoaded = false;
+    cropMode = false;
+    cropRect = null;
+    activeFrameIndex = null;
+    initialFrameTransform = null;
+    pinchFrameIndex = null;
+    dragSwapTargetIndex = null;
+    setPanningState(false);
+    resetViewport();
 
-  ensureStampState();
-  syncControlsFromStamp(getSelectedStamp());
-  updateCollageInfo();
-  requestRender();
-  showToast('Semua foto dihapus.', 'success');
-});
+    ensureStampState();
+    syncControlsFromStamp(getSelectedStamp());
+    updateCollageInfo();
+    requestRender();
+    showToast('Semua foto dihapus.', 'success');
+  });
+}
 
-const downloadButtons = Array.from(document.querySelectorAll('[data-save-photo]'));
+// Download Buttons
+const downloadButtons = Array.from(document.querySelectorAll('[data-save-photo], #downloadFinal'));
 downloadButtons.forEach((downloadButton) => {
   downloadButton.addEventListener('click', async () => {
     if (!imgLoaded) return alert('Belum ada foto untuk disimpan!');
@@ -868,6 +1859,7 @@ downloadButtons.forEach((downloadButton) => {
   });
 });
 
+// PWA Installation
 if (installBtn) {
   installBtn.addEventListener('click', async () => {
     if (!deferredPrompt) return;
@@ -898,6 +1890,7 @@ window.addEventListener('appinstalled', () => {
   }
 });
 
+// Setup Location & Storage
 setupLocationInput(locInput, suggestionsBox, gpsFollowBtn);
 setupGPSButton(gpsBtn, gpsFollowBtn);
 setupMapButton(mapBtn, mapModal, closeMapBtn, gpsFollowBtn);
@@ -932,67 +1925,8 @@ window.addEventListener('resize', () => {
   requestRender();
 });
 
+// Initial Bootstrap
 ensureStampState();
 syncControlsFromStamp(stamps[0]);
 updateCollageInfo();
 requestRender();
-
-// Android browsers and embedded WebViews do not always honor
-// `overscroll-behavior` on an internal scrolling panel. Mark Android so its
-// mobile rules can turn off scroll snapping, then cancel only pulls made after
-// a scroll boundary is reached.
-(() => {
-  const editorPanel = document.querySelector('.app-layout .controls');
-  if (!editorPanel) return;
-
-  const isAndroid = /Android/i.test(navigator.userAgent);
-  document.documentElement.classList.toggle('is-android', isAndroid);
-
-  let touchStartX = 0;
-  let touchStartY = 0;
-
-  const getScrollableAncestor = (target) => {
-    let element = target instanceof Element ? target : null;
-
-    while (element && element !== document.body) {
-      const overflowY = window.getComputedStyle(element).overflowY;
-      if (/(auto|scroll)/.test(overflowY) && element.scrollHeight > element.clientHeight) {
-        return element;
-      }
-      if (element === editorPanel) break;
-      element = element.parentElement;
-    }
-
-    return editorPanel.contains(target) ? editorPanel : null;
-  };
-
-  document.addEventListener('touchstart', (event) => {
-    if (event.touches.length !== 1) return;
-    touchStartX = event.touches[0].clientX;
-    touchStartY = event.touches[0].clientY;
-  }, { passive: true });
-
-  document.addEventListener('touchmove', (event) => {
-    if (!isAndroid) return;
-    if (event.touches.length !== 1) return;
-
-    const touch = event.touches[0];
-    const deltaX = touch.clientX - touchStartX;
-    const deltaY = touch.clientY - touchStartY;
-
-    // Do not interfere with horizontal gestures or the canvas pinch/pan logic.
-    if (Math.abs(deltaX) > Math.abs(deltaY)) return;
-
-    const scrollable = getScrollableAncestor(event.target);
-    if (!scrollable) {
-      event.preventDefault();
-      return;
-    }
-
-    const atTop = scrollable.scrollTop <= 0;
-    const atBottom = Math.ceil(scrollable.scrollTop + scrollable.clientHeight) >= scrollable.scrollHeight;
-    if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
-      event.preventDefault();
-    }
-  }, { passive: false });
-})();
