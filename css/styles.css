@@ -827,6 +827,283 @@ input[type=range]::-moz-range-thumb { background: var(--primary-hover); border-c
 }
 
 /* =========================================================
+   MODERN SAAS WORKSPACE
+   Final active-editor layer.  It deliberately follows legacy layers above,
+   so the live .app-layout is full-screen without changing the rollback
+   template kept in index.html.
+   ========================================================= */
+:root {
+  --bg-app: #F8FAFC !important;
+  --bg-panel: #0F172A !important;
+  --bg-card: #1E293B !important;
+  --bg-input: #334155 !important;
+  --primary: #0EA5E9 !important;
+  --primary-hover: #0284C7 !important;
+  --secondary-btn: #334155 !important;
+  --secondary-hover: #475569 !important;
+  --danger: #EF4444 !important;
+  --danger-hover: #DC2626 !important;
+  --success: #10B981 !important;
+  --text-main: #F8FAFC !important;
+  --text-muted: #94A3B8 !important;
+  --text-dark: #0F172A !important;
+  --radius: 10px !important;
+}
+
+html,
+body {
+  width: 100vw;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--bg-app);
+  color: var(--text-dark);
+}
+
+.app-layout {
+  width: 100vw !important;
+  max-width: none !important;
+  height: 100dvh !important;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: row !important;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+
+.app-layout .canvas-wrap {
+  order: 1;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100% !important;
+  border: 0;
+  border-radius: 0;
+  background-color: #F1F5F9 !important;
+  background-image: radial-gradient(#CBD5E1 1.5px, transparent 1.5px) !important;
+  background-size: 24px 24px;
+}
+
+.app-layout .canvas-wrap::after {
+  color: #475569;
+  background: rgba(255, 255, 255, 0.72);
+  border-color: #CBD5E1;
+}
+
+.app-layout .canvas-wrap canvas {
+  max-width: calc(100% - 48px);
+  max-height: calc(100% - 48px);
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+}
+
+.app-layout .controls {
+  order: 2;
+  width: 380px !important;
+  flex: 0 0 380px !important;
+  height: 100dvh !important;
+  min-height: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  align-content: normal;
+  gap: 12px !important;
+  padding: 16px !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--bg-panel) !important;
+  border: 0;
+  border-left: 1px solid #1E293B;
+  border-radius: 0;
+  box-shadow: -12px 0 35px rgba(15, 23, 42, 0.15);
+  backdrop-filter: none;
+}
+
+.dashboard-sticky-header {
+  position: sticky;
+  top: -16px;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: -16px -16px 0;
+  padding: 16px 16px 12px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid #1E293B;
+}
+
+.dashboard-sticky-header .file-btn,
+.dashboard-sticky-header .btn-camera,
+.dashboard-sticky-header .main-btn {
+  width: 100%;
+  min-height: 42px;
+  margin: 0;
+  padding: 10px 8px;
+  border-radius: var(--radius);
+  color: #FFFFFF;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.dashboard-sticky-header .file-btn,
+.dashboard-sticky-header .btn-camera {
+  background: var(--secondary-btn);
+  border: 1px solid #475569;
+  box-shadow: none;
+}
+
+.dashboard-sticky-header #downloadFinal {
+  grid-column: 1 / -1;
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
+}
+
+.dashboard-sticky-header .file-btn:hover,
+.dashboard-sticky-header .btn-camera:hover { background: var(--secondary-hover); }
+.dashboard-sticky-header #downloadFinal:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+
+.controls-mobile-header { display: none; }
+
+.control-card {
+  flex: 0 0 auto;
+  gap: 8px;
+  padding: 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  background: var(--bg-card) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+}
+
+.control-card-title {
+  margin: 0 0 2px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.card-status,
+.control-card label,
+.layout-picker-label,
+.slider-header,
+.stamp-align-header { color: var(--text-muted); }
+
+.control-card input[type="text"],
+.control-card input[type="datetime-local"],
+.control-card select,
+.control-card textarea,
+.control-card input[type="color"] {
+  width: 100%;
+  color: var(--text-main);
+  background: var(--bg-input);
+  border: 1px solid #475569;
+  border-radius: var(--radius);
+}
+
+.control-card input[type="text"],
+.control-card input[type="datetime-local"],
+.control-card select,
+.control-card textarea { padding: 10px 12px; }
+
+.control-card input:focus,
+.control-card select:focus,
+.control-card textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+}
+
+.layout-card select { min-height: 42px; }
+.layout-picker-grid,
+.layout-illustration { display: none; }
+
+.quick-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.quick-action-grid .main-btn {
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 4px;
+  color: var(--text-main);
+  background: var(--secondary-btn);
+  border: 1px solid #475569;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.quick-action-grid .main-btn:hover { background: var(--secondary-hover); }
+.btn-danger { background: var(--danger) !important; color: #FFFFFF !important; border-color: var(--danger) !important; }
+.btn-danger:hover { background: var(--danger-hover) !important; border-color: var(--danger-hover) !important; }
+.btn-primary { background: var(--primary); color: #FFFFFF; border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+.btn-secondary,
+.gps-btn,
+.map-btn-style { background: var(--secondary-btn); color: var(--text-main); border-color: #475569; }
+
+.stamp-align-card,
+.text-card .slider-container,
+.panel-note,
+.collage-slot-row,
+#storageInfo {
+  background: rgba(15, 23, 42, 0.36);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+.stamp-align-btn { background: var(--bg-input); border-color: #475569; color: var(--text-muted); }
+.stamp-align-btn.is-active { background: var(--primary); border-color: var(--primary-hover); color: #FFFFFF; }
+.collage-slot-select { color: var(--text-main); }
+.collage-slot-delete { color: #FCA5A5; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.12); }
+
+.controls::-webkit-scrollbar { width: 8px; }
+.controls::-webkit-scrollbar-track { background: #0F172A; }
+.controls::-webkit-scrollbar-thumb { background: #475569; border-radius: 999px; }
+
+@media (max-width: 768px) {
+  .app-layout { flex-direction: column !important; }
+  .app-layout .canvas-wrap { flex: 1 1 46vh; width: 100%; height: auto; }
+  .app-layout .canvas-wrap canvas { max-width: calc(100% - 24px); max-height: calc(100% - 24px); }
+  .app-layout .controls {
+    width: 100% !important;
+    flex: 0 1 54vh !important;
+    height: auto !important;
+    max-height: 54vh;
+    padding: 0 12px calc(18px + env(safe-area-inset-bottom)) !important;
+    gap: 10px;
+    border: 1px solid #1E293B;
+    border-bottom: 0;
+    border-radius: 24px 24px 0 0;
+  }
+  .dashboard-sticky-header {
+    top: 0;
+    display: grid;
+    margin: 0 -12px;
+    padding: 12px;
+  }
+  .controls-mobile-header {
+    display: none !important;
+  }
+  .sheet-handle { background: var(--text-muted); }
+  .control-card { padding: 12px; }
+}
+
+/* =========================================================
    BOTTOM PANEL REFACTOR
    The active markup is .app-layout; the previous sidebar markup is
    preserved in an inert template in index.html for safe rollback.

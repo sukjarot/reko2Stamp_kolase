@@ -101,7 +101,7 @@ let canvasTapStart = null;
 let canvasGestureMoved = false;
 
 const addPhotoInput = document.getElementById('addPhotoInput');
-const layoutButtons = Array.from(document.querySelectorAll('[data-layout]'));
+const layoutSelect = document.getElementById('layoutSelect');
 const dtInput = document.getElementById('dtInput');
 const showDateToggle = document.getElementById('showDateToggle');
 const locInput = document.getElementById('locInput');
@@ -168,11 +168,7 @@ const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toI
 dtInput.value = localIso;
 
 function syncLayoutPicker() {
-  layoutButtons.forEach((button) => {
-    const isActive = button.dataset.layout === selectedLayoutKey;
-    button.classList.toggle('is-active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  });
+  if (layoutSelect) layoutSelect.value = selectedLayoutKey;
 }
 
 function setSelectedLayoutKey(layoutKey) {
@@ -181,6 +177,19 @@ function setSelectedLayoutKey(layoutKey) {
 }
 
 syncLayoutPicker();
+
+if (layoutSelect) {
+  layoutSelect.addEventListener('change', () => {
+    setSelectedLayoutKey(layoutSelect.value);
+    validateLayoutKey();
+    updateCollageInfo();
+
+    if (collageImages.length) {
+      ensureCollageFrameTransforms();
+      rebuildCollageSource();
+    }
+  });
+}
 
 function requestRender() {
   if (!isDrawing) {
