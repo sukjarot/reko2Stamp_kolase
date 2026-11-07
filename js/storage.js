@@ -4,6 +4,7 @@
 
 let dirHandle = null;
 const DEFAULT_DIR_STATUS = "Belum ada folder dipilih. File akan diunduh ke folder Download default browser/sistem.";
+const MAX_EXPORT_BYTES = 1024 * 1024;
 
 function dataURLToBlob(dataURL) {
   const parts = dataURL.split(';base64,');
@@ -125,30 +126,68 @@ function setupStorageModal(storageBtn, storageModal, pickDirBtn, clearDirBtn, sa
   syncStorageUI(dirStatus, storageInfo, activeFolderLabel, clearDirBtn);
 }
 
+function estimateDataUrlBytes(dataUrl) {
+  if (!dataUrl || !dataUrl.startsWith('data:')) return 0;
+  const headerLength = 'data:image/jpeg;base64,'.length;
+  const base64 = dataUrl.substring(dataUrl.indexOf(',') + 1);
+  return (base64.length - headerLength) * 0.75;
+}
+
+function createExportDataUrl(canvas, mimeType = 'image/jpeg', targetBytes = MAX_EXPORT_BYTES, startQuality = 0.92) {
+  if (!canvas) return '';
+
+  let quality = startQuality;
+  let dataUrl = canvas.toDataURL(mimeType, quality);
+  let estimatedBytes = estimateDataUrlBytes(dataUrl);
+
+  if (estimatedBytes <= targetBytes) return dataUrl;
+
+  let low = 0.1;
+  let high = quality;
+  let bestUrl = dataUrl;
+  let bestBytes = estimatedBytes;
+
+  while (low <= high) {
+    const mid = (low + high) / 2;
+    const candidate = canvas.toDataURL(mimeType, mid);
+    const candidateBytes = estimateDataUrlBytes(candidate);
+
+    if (candidateBytes <= targetBytes) {
+      bestUrl = candidate;
+      bestBytes = candidateBytes;
+      low = mid + 0.01;
+    } else {
+      high = mid - 0.01;
+    }
+  }
+
+  if (bestBytes > targetBytes && mimeType === 'image/jpeg') {
+    return createExportDataUrl(canvas, 'image/webp', targetBytes, 0.82);
+  }
+
+  return bestUrl;
+}
+
 async function savePhoto(canvas, filePrefixInput, fileCounterInput, currentDirHandle, filenamePreview, triggerButton) {
   const newBtn = triggerButton || document.getElementById('downloadFinal');
 
   if (!newBtn) {
-    return alert("Tombol Simpan tidak ditemukan!");
+    return alert('Tombol Simpan tidak ditemukan!');
   }
 
   const originalButtonLabel = newBtn.textContent;
-  newBtn.textContent = "\u23F3 Memproses...";
+  newBtn.textContent = '⏳ Memproses...';
   newBtn.disabled = true;
 
   try {
-    let quality = 0.92;
-    let dataURL = canvas.toDataURL('image/jpeg', quality);
-    const getFileSize = (base64String) => (base64String.length - "data:image/jpeg;base64,".length) * (3 / 4);
-
-    while (getFileSize(dataURL) > 4 * 1024 * 1024 && quality > 0.1) {
-      quality -= 0.05;
-      dataURL = canvas.toDataURL('image/jpeg', quality);
-    }
-
-    const prefix = filePrefixInput ? filePrefixInput.value.replace(/[^a-zA-Z0-9_-]/g, "") : "RekoStamp_";
-    const count = fileCounterInput ? String(fileCounterInput.value).padStart(3, '0') : "001";
+    const prefix = filePrefixInput ? filePrefixInput.value.replace(/[^a-zA-Z0-9_-]/g, '') : 'RekoStamp_';
+    const count = fileCounterInput ? String(fileCounterInput.value).padStart(3, '0') : '001';
     const finalName = `${prefix}${count}.jpg`;
+    let exportDataUrl = createExportDataUrl(canvas, 'image/jpeg', MAX_EXPORT_BYTES, 0.92);
+
+    if (!exportDataUrl || exportDataUrl.length < 100) {
+      exportDataUrl = canvas.toDataURL('image/jpeg', 0.72);
+    }
 
     if (currentDirHandle) {
       try {
@@ -156,14 +195,14 @@ async function savePhoto(canvas, filePrefixInput, fileCounterInput, currentDirHa
         if ((await currentDirHandle.queryPermission(opts)) !== 'granted') {
           const perm = await currentDirHandle.requestPermission(opts);
           if (perm !== 'granted') {
-            throw new Error("Akses folder ditolak user");
+            throw new Error('Akses folder ditolak user');
           }
         }
 
         const fileHandle = await currentDirHandle.getFileHandle(finalName, { create: true });
         const writable = await fileHandle.createWritable();
+        const blob = dataURLToBlob(exportDataUrl);
 
-        const blob = dataURLToBlob(dataURL);
         await writable.write(blob);
         await writable.close();
 
@@ -173,14 +212,14 @@ async function savePhoto(canvas, filePrefixInput, fileCounterInput, currentDirHa
         await saveSetting('counter', nextCount);
         updateStoragePreview(filePrefixInput, fileCounterInput, filenamePreview);
 
-        alert(`\u2705 Foto tersimpan: ${finalName} di folder ${currentDirHandle.name}`);
+        alert(`✅ Foto tersimpan: ${finalName} di folder ${currentDirHandle.name}`);
       } catch (err) {
-        console.error("Gagal simpan folder:", err);
-        alert("Gagal simpan ke folder khusus. File akan diunduh lewat browser default.");
-        fallbackDownload(dataURL, finalName);
+        console.error('Gagal simpan folder:', err);
+        alert('Gagal simpan ke folder khusus. File akan diunduh lewat browser default.');
+        fallbackDownload(exportDataUrl, finalName);
       }
     } else {
-      fallbackDownload(dataURL, finalName);
+      fallbackDownload(exportDataUrl, finalName);
     }
   } finally {
     newBtn.textContent = originalButtonLabel;

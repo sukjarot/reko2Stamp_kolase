@@ -1,0 +1,9 @@
+{
+  "name": "reko2stamp-kolase",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PWA editor foto Reko2stamp.kolase",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
